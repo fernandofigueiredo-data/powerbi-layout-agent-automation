@@ -26,10 +26,10 @@ das páginas ficam intactos, e o resultado vai para uma cópia
 
 | Comando | Para quê |
 |---|---|
-| `/power-bi-layout-with-pbix-mcp:reorganizar <arquivo.pbix>` | Fluxo completo: inventário, diagnóstico, grid, motor, aplicação, cópia salva, auditoria e relatório. |
-| `/power-bi-layout-with-pbix-mcp:diagnosticar <arquivo.pbix>` | Só leitura: nota atual, problemas por página e a nota que a reorganização alcançaria. |
-| `/power-bi-layout-with-pbix-mcp:grid 1920x1080` | Grid de uma página: colunas, margens, calha, vãos de n colunas. |
-| `/power-bi-layout-with-pbix-mcp:preview` | Regenera o esquema HTML antes/depois. |
+| `/powerbi-layout-agent-automation:reorganizar <arquivo.pbix>` | Fluxo completo: inventário, diagnóstico, grid, motor, aplicação, cópia salva, auditoria e relatório. |
+| `/powerbi-layout-agent-automation:diagnosticar <arquivo.pbix>` | Só leitura: nota atual, problemas por página e a nota que a reorganização alcançaria. |
+| `/powerbi-layout-agent-automation:grid 1920x1080` | Grid de uma página: colunas, margens, calha, vãos de n colunas. |
+| `/powerbi-layout-agent-automation:preview` | Regenera o esquema HTML antes/depois. |
 
 A skill também dispara sozinha quando você pede algo como "organize o layout
 deste dashboard" ou "alinhe os gráficos do relatório".
@@ -44,17 +44,17 @@ o hook com `uv run`, que funciona igual em macOS, Linux e Windows e baixa um
 Python se faltar.
 
 ```bash
-claude plugin marketplace add fernandofigueiredo-data/power-bi_layout_with_pbix-mcp
+claude plugin marketplace add fernandofigueiredo-data/powerbi-layout-agent-automation
 ```
 
 ```bash
-claude plugin install power-bi-layout-with-pbix-mcp@power-bi-layout-with-pbix-mcp
+claude plugin install powerbi-layout-agent-automation@powerbi-layout-agent-automation
 ```
 
 Para testar a partir de uma cópia local do repositório:
 
 ```bash
-claude --plugin-dir ./plugins/power-bi_layout_with_pbix-mcp
+claude --plugin-dir ./plugins/powerbi-layout-agent-automation
 ```
 
 Se você já tem o pbix-mcp configurado à parte, as ferramentas dele e as do
@@ -108,7 +108,7 @@ unidade e a sobra da largura nas margens laterais.
 | 1024×768 (4:3) | 8 px | 24, 40 px | 16 px | 64 px |
 | 320×240 (dica) | 4 px | 12, 20 px | 8 px | 16 px |
 
-Qualquer outro tamanho: `/power-bi-layout-with-pbix-mcp:grid LxA`.
+Qualquer outro tamanho: `/powerbi-layout-agent-automation:grid LxA`.
 
 O pbix-mcp não renderiza páginas: abra a cópia no Power BI Desktop para a
 conferência visual final (rótulos cortados, quebras de título).
@@ -117,7 +117,7 @@ conferência visual final (rótulos cortados, quebras de título).
 
 ```
 .claude-plugin/marketplace.json          # este repositório é o marketplace
-plugins/power-bi_layout_with_pbix-mcp/
+plugins/powerbi-layout-agent-automation/
   .claude-plugin/plugin.json
   .mcp.json                              # pbix-mcp embutido (uvx, versão fixada)
   skills/reorganizar-layout-power-bi/    # SKILL.md, references/, examples/ e scripts/
@@ -133,22 +133,21 @@ uv run --no-project python -m unittest discover tests -v
 ```
 
 ```bash
-claude plugin validate plugins/power-bi_layout_with_pbix-mcp
+claude plugin validate plugins/powerbi-layout-agent-automation
 ```
 
 O plugin também passa pelo `plugin-validator` e pelo `skill-reviewer` do plugin
 oficial [plugin-dev](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/plugin-dev).
 
-O identificador do plugin e do marketplace é `power-bi-layout-with-pbix-mcp`
-(kebab-case, como o manifesto exige); o repositório e a pasta mantêm o nome
-`power-bi_layout_with_pbix-mcp`.
+O repositório, o plugin, o marketplace e a pasta do plugin usam o mesmo nome,
+`powerbi-layout-agent-automation` (kebab-case, como o manifesto exige).
 
 ## Fundamentos
 
 As regras vêm de Microsoft Learn (relatórios visualmente eficazes, dicas de
 dashboard, linhas de grade), da regra 3-30-300 da SQLBI e dos padrões de
 leitura em Z/F. Fontes e divergências entre elas em
-[boas-praticas-layout.md](plugins/power-bi_layout_with_pbix-mcp/skills/reorganizar-layout-power-bi/references/boas-praticas-layout.md).
+[boas-praticas-layout.md](plugins/powerbi-layout-agent-automation/skills/reorganizar-layout-power-bi/references/boas-praticas-layout.md).
 
 ## Licença
 

@@ -30,5 +30,5 @@ uma chamada por comando, sem variável e sem `&&`.
 
 Responda com: nota atual por página e geral; os três problemas mais graves de
 cada página, em uma linha cada; a nota que a reorganização alcançaria; o caminho
-completo do HTML. Termine oferecendo rodar `/power-bi-layout-with-pbix-mcp:reorganizar`
+completo do HTML. Termine oferecendo rodar `/powerbi-layout-agent-automation:reorganizar`
 no mesmo arquivo.

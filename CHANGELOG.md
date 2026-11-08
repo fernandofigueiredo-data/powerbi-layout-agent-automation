@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-11-08
+
+- Repositório, plugin, marketplace e pasta do plugin renomeados para
+  `powerbi-layout-agent-automation`. Os comandos passam a ser
+  `/powerbi-layout-agent-automation:...` e o prefixo das ferramentas do
+  servidor embutido, `mcp__plugin_powerbi-layout-agent-automation_pbix-mcp__`.
+- Quem instalou a 0.2.0 precisa remover o plugin antigo e instalar de novo.
+
 ## 0.2.0 — 2026-11-08
 
 Revisão com o plugin-dev (plugin-validator, skill-reviewer e validadores de

@@ -1,7 +1,7 @@
 ---
 description: Reorganiza o layout de um relatório Power BI (.pbix) — grid, alinhamento, margens, tamanho proporcional e leitura em Z — numa cópia, sem tocar em dados ou formatação
 argument-hint: "<caminho do .pbix>"
-allowed-tools: Bash(uv run:*), Read, Glob, Grep, Write, Edit, Agent, Task, mcp__plugin_power-bi-layout-with-pbix-mcp_pbix-mcp
+allowed-tools: Bash(uv run:*), Read, Glob, Grep, Write, Edit, Agent, Task, mcp__plugin_powerbi-layout-agent-automation_pbix-mcp
 ---
 
 Reorganize o layout do relatório Power BI indicado, seguindo a skill

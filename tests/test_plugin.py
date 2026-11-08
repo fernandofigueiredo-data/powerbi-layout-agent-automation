@@ -1,4 +1,4 @@
-"""Testes do plugin power-bi_layout_with_pbix-mcp (só biblioteca padrão).
+"""Testes do plugin powerbi-layout-agent-automation (só biblioteca padrão).
 
 Rodar da raiz do repositório:
   python3 -m unittest discover tests -v
@@ -17,7 +17,7 @@ import unittest
 import zipfile
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PLUGIN = os.path.join(RAIZ, "plugins", "power-bi_layout_with_pbix-mcp")
+PLUGIN = os.path.join(RAIZ, "plugins", "powerbi-layout-agent-automation")
 SCRIPTS = os.path.join(PLUGIN, "skills", "reorganizar-layout-power-bi", "scripts")
 FIXTURES = os.path.join(RAIZ, "tests", "fixtures")
 sys.path.insert(0, SCRIPTS)
@@ -220,7 +220,7 @@ class TestHook(unittest.TestCase):
         self.assertIsNone(hook_guardiao.decidir(dict(base, tool_input={"alias": "a", "output_path": "x.pbix"})))
 
     def test_prefixo_do_plugin_tambem_e_vigiado(self):
-        ev = {"tool_name": "mcp__plugin_power-bi-layout-with-pbix-mcp_pbix-mcp__pbix_save", "tool_input": {}}
+        ev = {"tool_name": "mcp__plugin_powerbi-layout-agent-automation_pbix-mcp__pbix_save", "tool_input": {}}
         self.assertIsNotNone(hook_guardiao.decidir(ev))
 
     def test_marcador_liga_a_vigilancia_de_formatacao(self):

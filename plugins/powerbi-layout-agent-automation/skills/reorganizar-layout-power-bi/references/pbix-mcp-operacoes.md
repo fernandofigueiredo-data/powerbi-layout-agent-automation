@@ -1,6 +1,6 @@
 # Operações no pbix-mcp para reorganizar layout
 
-Sequência de ferramentas, armadilhas conhecidas e formato dos JSONs de layout. Os nomes abaixo são os do servidor pbix-mcp; o prefixo que o cliente acrescenta varia conforme a instalação: `mcp__plugin_power-bi-layout-with-pbix-mcp_pbix-mcp__` para o servidor que o plugin traz, `mcp__pbix-mcp__` para um pbix-mcp configurado à parte. Escolher um e usar só ele na reorganização inteira, porque cada servidor tem os seus próprios arquivos abertos.
+Sequência de ferramentas, armadilhas conhecidas e formato dos JSONs de layout. Os nomes abaixo são os do servidor pbix-mcp; o prefixo que o cliente acrescenta varia conforme a instalação: `mcp__plugin_powerbi-layout-agent-automation_pbix-mcp__` para o servidor que o plugin traz, `mcp__pbix-mcp__` para um pbix-mcp configurado à parte. Escolher um e usar só ele na reorganização inteira, porque cada servidor tem os seus próprios arquivos abertos.
 
 O inventário sai de `scripts/inventario_pbix.py`, que lê o .pbix como zip sem passar pelo pbix-mcp; as ferramentas de leitura abaixo servem para conferi-lo e para o que o arquivo não mostra sozinho (itens de um segmentador, bookmarks).
 
