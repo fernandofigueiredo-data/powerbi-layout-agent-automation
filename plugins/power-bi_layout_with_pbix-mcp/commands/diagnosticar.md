@@ -12,7 +12,7 @@ diretório de trabalho (um só: use; vários: pergunte).
 Scripts: `${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/`.
 
 1. Crie a pasta `layout_<nome>/` ao lado do arquivo e rode
-   `python3 <scripts>/inventario_pbix.py <arquivo> --saida layout_<nome>/layout_antes.json`.
+   `uv run --no-project --quiet <scripts>/inventario_pbix.py <arquivo> --saida layout_<nome>/layout_antes.json`.
 2. Revise as funções sugeridas (`role`) e o visual principal de cada página
    com as regras da tabela de funções da skill **reorganizar-layout-power-bi**,
    corrigindo o JSON onde a sugestão estiver errada.

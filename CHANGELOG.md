@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.1 — 2026-11-07
+
+Correções encontradas ao rodar o motor nos .pbix reais.
+
+- Título largo dentro das margens (metade da largura ou mais) vira faixa de
+  cabeçalho na largura do grid, com data ou subtítulo à direita; o KPI
+  principal volta para o canto, logo abaixo.
+- Segmentador em lista vertical só vai para a coluna de filtros se não couber
+  na altura da faixa superior; os que cabem ficam ao lado dos KPIs.
+- Filtros da faixa só vão para a coluna quando não cabem na linha dos KPIs ou
+  a página não tem KPI; um campo que vai para a coluna numa página vai em todas
+  (duas passadas no motor).
+- KPI até um terço da largura quando divide a linha; filtro até 3 colunas.
+- Conferência: para filtros, mesma linha é mesmo topo e mesma base.
+- Hook, comandos, agente e skill rodam os scripts com `uv run --no-project`
+  em vez de `python3`, que não existe no Windows padrão.
+
 ## 0.1.0 — 2026-11-07
 
 Primeira versão, a partir da skill `reorganizar-layout-power-bi`.

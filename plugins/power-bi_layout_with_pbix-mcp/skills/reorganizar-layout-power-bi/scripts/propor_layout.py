@@ -104,7 +104,7 @@ def colocar_linha(pg, itens, y, h, col0, colunas, pesos):
         c += s
 
 
-def layout_normal(pg, us):
+def layout_normal(pg, us, forcar_coluna=frozenset()):
     g = pg.g
     W, H = g["largura"], g["altura"]
     b, m, gt, C = g["base"], g["margem"], g["calha"], g["colunas"]
@@ -122,8 +122,20 @@ def layout_normal(pg, us):
     ident = [u for u in us if u["role"] == "identidade" and not u["rep"].get("full_bleed")]
     kpis = [u for u in us if u["role"] == "kpi"]
     filtros = [u for u in us if u["role"] == "filtro"]
-    f_lista = [u for u in filtros if str(u["rep"].get("slicer_mode", "Dropdown")).lower() == "basic"]
+    # Lista vertical só vai para a coluna de filtros se não couber na altura da faixa superior.
+    h_topo_ref = max(h_card, min(encaixar(0.18 * util_h, b), encaixar(0.22 * util_h, b, "floor")))
+
+    def cabe_na_faixa(u):
+        itens = u["rep"].get("items")
+        precisa = (40 + 24 * int(itens)) * s if itens else u["rep"]["height"]
+        return precisa <= h_topo_ref + b
+
+    basicos = [u for u in filtros if str(u["rep"].get("slicer_mode", "Dropdown")).lower() == "basic"]
+    f_lista = [u for u in basicos if not cabe_na_faixa(u)]
     f_susp = [u for u in filtros if u not in f_lista]
+    if len(f_lista) < len(basicos):
+        pg.d(f"{len(basicos) - len(f_lista)} segmentador(es) em lista vertical cabem na altura da faixa "
+             "superior e ficam nela, ao lado dos KPIs.")
     meio = [u for u in us if u["role"] in MEIO]
     base_ = [u for u in us if u["role"] in BASE]
     notas = [u for u in us if u["role"] == "nota"]
@@ -149,6 +161,30 @@ def layout_normal(pg, us):
         y0 = h_head + gt
         pg.d("faixa de título de borda a borda mantida como cabeçalho; o conteúdo começa abaixo dela.")
 
+    # Título largo dentro das margens: vira faixa de cabeçalho com a largura do grid.
+    # Identidades pequenas da mesma faixa (data, subtítulo, logo) ficam à direita dele.
+    largos = [u for u in ident if u["rep"]["width"] >= 0.5 * W]
+    if largos:
+        faixa = sorted(ident, key=lambda u: u["x"])
+        pequenos = [u for u in faixa if u not in largos]
+        livre = C - 2 * len(pequenos)
+        if livre < 4 * len(largos):
+            pequenos, livre = [], C
+            faixa = sorted(largos, key=lambda u: u["x"])
+        spans = []
+        cotas = iter(distribuir([1] * len(largos), livre, minimo=1))
+        for u in faixa:
+            spans.append(next(cotas) if u in largos else 2)
+        h_cab = max(5 * b, min(max(encaixar(u["rep"]["height"], b) for u in faixa), 10 * b))
+        c = 0
+        for u, sp in zip(faixa, spans):
+            pg.geo[u["chave"]] = (x_inicio(g, c), y0, largura_vao(g, sp), h_cab)
+            c += sp
+        y0 += h_cab + gt
+        ident = [u for u in ident if u not in faixa]
+        pg.d("título largo virou faixa de cabeçalho dentro das margens; o KPI principal abre a faixa "
+             "superior logo abaixo dele.")
+
     y_fim = H - m
     # Linha de navegação: mesma posição em todas as páginas do mesmo tamanho.
     if nav:
@@ -171,8 +207,19 @@ def layout_normal(pg, us):
         xc, wc = x_inicio(g, Cm), largura_vao(g, fc)
         if notas:
             notas_coluna, notas = notas, []
-        # Com coluna de filtros, os segmentadores em lista suspensa abrem a coluna, no alto.
-        susp_coluna, f_susp = sorted(f_susp, key=lambda u: (u["y"], u["x"])), []
+        # Com coluna de filtros, os demais segmentadores abrem a coluna, no alto, quando não há
+        # KPI na página ou quando não cabem na linha dos KPIs com 2 colunas cada.
+        # Filtros cujo campo foi para a coluna em outra página vão para a coluna aqui também.
+        forcados = [u for u in f_susp if u["rep"].get("field") in forcar_coluna]
+        livres = [u for u in f_susp if u not in forcados]
+        cabem_no_topo = 2 * (len(ident) + len(kpis) + len(livres)) <= Cm
+        if kpis and cabem_no_topo:
+            susp_coluna, f_susp = forcados, livres
+        else:
+            susp_coluna, f_susp = f_susp, []
+        susp_coluna = sorted(susp_coluna, key=lambda u: (u["y"], u["x"]))
+        if forcados:
+            pg.d(f"{len(forcados)} filtro(s) na coluna para repetir a posição que têm nas outras páginas.")
         alt_notas = [max(4 * b, min(encaixar(u["rep"]["height"], b, "ceil"), 12 * b)) for u in notas_coluna]
         reserva = sum(alt_notas) + gt * len(alt_notas)
         disponivel = y_fim - y0 - reserva - gt * (len(f_lista) - 1)
@@ -217,16 +264,26 @@ def layout_normal(pg, us):
         spans = [2] * ni
         if nk:
             k = max(1, resto // nk)
+            # Com filtros ou identidade na linha, um KPI não passa de um terço da largura.
+            teto = max(2, Cm // 3)
+            if k > teto and (f_susp_linha or ni):
+                k = teto
             if resto < 2 * nk:
                 pg.l(f"{nk} KPIs não cabem com 2 colunas cada; ficaram com {k}.")
             sobra = Cm - 2 * ni - 2 * len(f_susp_linha) - k * nk
             spans += [k] * nk
-            spans += [2] * len(f_susp_linha)
+            # Filtros crescem no máximo até 3 colunas; o resto da sobra vai para o KPI principal.
+            por_filtro = min(1, sobra // len(f_susp_linha)) if f_susp_linha and sobra >= nk else 0
+            spans += [2 + por_filtro] * len(f_susp_linha)
+            sobra -= por_filtro * len(f_susp_linha)
             if sobra > 0:
-                # A sobra vai para o KPI principal, o mais importante da faixa.
+                # A sobra que não se divide igualmente vai para o KPI principal, o mais importante.
                 spans[ni] += sobra
-                pg.d(f"KPI principal {kpis[0]['rep']['id']} com {sobra} coluna(s) a mais que os demais, "
-                     "para fechar a faixa no grid.")
+                if nk > 1:
+                    pg.d(f"KPI principal {kpis[0]['rep']['id']} com {sobra} coluna(s) a mais que os demais, "
+                         "para fechar a faixa no grid.")
+                else:
+                    pg.d(f"KPI único {kpis[0]['rep']['id']} ocupa as colunas livres da faixa superior.")
         elif ident:
             spans = distribuir([2 if u in ident else 1 for u in itens], Cm, minimo=1)
         elif itens:
@@ -433,19 +490,40 @@ def grid_da_pagina(p, args):
                        margem=args.margin, calha=args.gutter, base=args.base)
 
 
-def propor(doc, args):
-    out = copy.deepcopy(doc)
-    decisoes, limitacoes = [], []
-    paginas = []
+def montar(out, args, forcar_coluna):
+    decisoes, limitacoes, paginas = [], [], []
     for p in out["pages"]:
         g = grid_da_pagina(p, args)
         pg = Pagina(p, g, decisoes, limitacoes)
         us = unidades(p)
         if p.get("type", "normal") == "normal":
-            layout_normal(pg, us)
+            layout_normal(pg, us, forcar_coluna)
         else:
             layout_auxiliar(pg, us)
         paginas.append((pg, us))
+    return decisoes, limitacoes, paginas
+
+
+def campos_na_coluna(paginas):
+    """Campos de filtro que terminaram na coluna de filtros em alguma página."""
+    campos = set()
+    for pg, us in paginas:
+        if pg.p.get("type", "normal") != "normal":
+            continue
+        x_coluna = x_inicio(pg.g, pg.g["colunas"] - 2)
+        for u in us:
+            geo = pg.geo.get(u["chave"])
+            if u["role"] == "filtro" and u["rep"].get("field") and geo and geo[0] == x_coluna:
+                campos.add(u["rep"]["field"])
+    return frozenset(campos)
+
+
+def propor(doc, args):
+    out = copy.deepcopy(doc)
+    # Duas passadas: a primeira descobre quais campos de filtro vão para a coluna em alguma
+    # página; a segunda leva esses campos para a coluna em todas as páginas que a têm.
+    _, _, paginas = montar(copy.deepcopy(out), args, frozenset())
+    decisoes, limitacoes, paginas = montar(out, args, campos_na_coluna(paginas))
     alinhar_filtros_entre_paginas(paginas)
     for pg, us in paginas:
         aplicar(pg, us)

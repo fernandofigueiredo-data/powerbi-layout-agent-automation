@@ -1,7 +1,7 @@
 {
   "name": "power-bi_layout_with_pbix-mcp",
   "displayName": "Power BI Layout",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reorganiza o layout de relatórios Power BI (.pbix) pelo pbix-mcp: grid de 12 colunas, alinhamento, margens e calhas constantes, tamanho proporcional à importância e leitura em Z — mexendo só na geometria dos visuais. Traz motor de layout determinístico, nota de layout 0–100, hook guardião, auditor independente e esquema visual antes/depois.",
   "author": {
     "name": "Fernando Figueiredo"

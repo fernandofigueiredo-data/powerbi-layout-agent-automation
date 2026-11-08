@@ -8,6 +8,7 @@ import copy
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -93,7 +94,7 @@ class TestMotor(unittest.TestCase):
         return antes, depois
 
     def test_fixtures_saem_sem_erros_e_com_nota_maior(self):
-        for nome in ("pagina_1280.json", "pagina_1920_coluna.json", "casos_especiais.json"):
+        for nome in ("pagina_1280.json", "pagina_1920_coluna.json", "casos_especiais.json", "titulo_largo.json"):
             antes, depois = self.proposta(nome)
             erros, _ = conferir(depois)
             self.assertEqual(erros, [], nome)
@@ -134,6 +135,24 @@ class TestMotor(unittest.TestCase):
         self.assertEqual(geo(v["uf"]), geo(v["uf2"]))
         self.assertEqual(v["fonte"]["x"], x_coluna)  # nota fecha a coluna
         self.assertEqual((v["titulo"]["x"], v["titulo"]["y"], v["titulo"]["width"]), (0, 0, 1920))
+
+    def test_titulo_largo_vira_cabecalho_e_kpi_abre_a_faixa(self):
+        _, depois = self.proposta("titulo_largo.json")
+        v = por_id(depois)
+        g = _grid.grid_padrao(1280, 720)
+        self.assertEqual((v["titulo"]["x"], v["titulo"]["y"]), (24, 24))
+        self.assertEqual(v["data"]["x"] + v["data"]["width"], 1280 - g["margem"])
+        self.assertEqual(v["titulo"]["height"], v["data"]["height"])
+        # KPI principal no canto, logo abaixo do cabeçalho.
+        self.assertEqual(v["total"]["x"], 24)
+        self.assertEqual(v["total"]["y"], v["titulo"]["y"] + v["titulo"]["height"] + g["calha"])
+        # Listas que cabem na faixa ficam ao lado do KPI; a de 30 itens vai para a coluna.
+        self.assertEqual(v["f1"]["y"], v["total"]["y"])
+        self.assertEqual((v["f1"]["width"], v["f1"]["height"]), (v["f2"]["width"], v["f2"]["height"]))
+        self.assertEqual(v["f3"]["x"], g["x_colunas"][10])
+        self.assertGreater(v["f3"]["height"], v["f1"]["height"])
+        # O KPI não passa de um terço da largura quando divide a linha com filtros.
+        self.assertLessEqual(v["total"]["width"], _grid.largura_vao(g, 6))
 
     def test_empilhados_grupos_fundo_e_navegacao(self):
         _, depois = self.proposta("casos_especiais.json")
@@ -323,8 +342,29 @@ class TestManifestos(unittest.TestCase):
     def test_hook_aponta_para_script_existente(self):
         with open(os.path.join(PLUGIN, "hooks", "hooks.json"), encoding="utf-8") as f:
             h = json.load(f)
-        arg = h["hooks"]["PreToolUse"][0]["hooks"][0]["args"][0]
+        hook = h["hooks"]["PreToolUse"][0]["hooks"][0]
+        self.assertEqual(hook["command"], "uv")  # python3 não existe no Windows padrão
+        arg = next(a for a in hook["args"] if a.endswith(".py"))
         self.assertTrue(os.path.exists(arg.replace("${CLAUDE_PLUGIN_ROOT}", PLUGIN)))
+
+    def test_nenhum_texto_do_plugin_manda_rodar_python3(self):
+        for pasta, _, arquivos in os.walk(PLUGIN):
+            for nome in arquivos:
+                if nome.endswith((".md", ".json")):
+                    with open(os.path.join(pasta, nome), encoding="utf-8") as f:
+                        texto = f.read()
+                    self.assertNotIn("python3 ", texto, nome)
+                    self.assertNotIn("`python ", texto, nome)
+
+    @unittest.skipUnless(shutil.which("uv"), "uv não instalado")
+    def test_hook_roda_pelo_uv_como_no_hooks_json(self):
+        with open(os.path.join(PLUGIN, "hooks", "hooks.json"), encoding="utf-8") as f:
+            hook = json.load(f)["hooks"]["PreToolUse"][0]["hooks"][0]
+        cmd = [hook["command"]] + [a.replace("${CLAUDE_PLUGIN_ROOT}", PLUGIN) for a in hook["args"]]
+        ev = json.dumps({"tool_name": "mcp__pbix-mcp__pbix_save", "tool_input": {"alias": "a"}})
+        r = subprocess.run(cmd, input=ev, capture_output=True, text=True, timeout=hook["timeout"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "ask")
 
 
 if __name__ == "__main__":

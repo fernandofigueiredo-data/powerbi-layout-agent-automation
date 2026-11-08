@@ -36,9 +36,10 @@ deste dashboard" ou "alinhe os gráficos do relatório".
 
 ## Instalação
 
-Pré-requisitos: [Claude Code](https://claude.com/claude-code), Python 3 e
-[uv](https://docs.astral.sh/uv/) (o plugin sobe o pbix-mcp com `uvx`, na versão
-0.9.153).
+Pré-requisitos: [Claude Code](https://claude.com/claude-code) e
+[uv](https://docs.astral.sh/uv/). O plugin sobe o pbix-mcp com `uvx` (versão
+0.9.153) e roda os scripts e o hook com `uv run`, que funciona igual em macOS,
+Linux e Windows e baixa um Python se faltar.
 
 ```bash
 claude plugin marketplace add fernandofigueiredo-data/power-bi_layout_with_pbix-mcp

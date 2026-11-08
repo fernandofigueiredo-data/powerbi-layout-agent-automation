@@ -176,9 +176,13 @@ def analisar(p, args):
     # Mesma função na mesma linha com tamanhos diferentes.
     rows = {}
     for v in uniq:
-        if v.get("role") in ("kpi", "filtro"):
+        if v.get("role") == "kpi":
             rows.setdefault((v["role"], round(v["y"])), []).append(v)
-    for (role, y), group in rows.items():
+        elif v.get("role") == "filtro":
+            # Um filtro da coluna lateral pode começar na mesma altura da faixa sem fazer parte
+            # da linha: para filtros, mesma linha é mesmo topo e mesma base.
+            rows.setdefault((v["role"], round(v["y"]), round(v["y"] + v["height"])), []).append(v)
+    for (role, y, *_), group in rows.items():
         if len(group) < 2:
             continue
         mt["linhas"] += 1

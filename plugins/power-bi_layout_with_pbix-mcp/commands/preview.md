@@ -14,7 +14,7 @@ Gere o esquema visual do layout. Argumentos (podem estar vazios): `$ARGUMENTS`
 Rode:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/preview_layout.py <antes.json> [<depois.json>] <pasta>/antes_depois.html
+uv run --no-project --quiet ${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/preview_layout.py <antes.json> [<depois.json>] <pasta>/antes_depois.html
 ```
 
 Abra o HTML para o usuário e diga em uma linha a nota antes → depois.

@@ -7,9 +7,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/hook_guardiao.py"],
-            "timeout": 10
+            "command": "uv",
+            "args": [
+              "run",
+              "--no-project",
+              "--quiet",
+              "${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/hook_guardiao.py"
+            ],
+            "timeout": 30
           }
         ]
       }

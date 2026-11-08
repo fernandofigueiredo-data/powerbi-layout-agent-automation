@@ -18,7 +18,7 @@ O motivo é prático: quem pede uma reorganização quer o mesmo relatório mais
 ## Pré-requisitos
 
 - Servidor MCP pbix-mcp conectado. O plugin traz o seu (`uvx --from pbix-mcp==0.9.153 pbix-mcp-server`), e as ferramentas podem aparecer com o prefixo `mcp__plugin_power-bi_layout_with_pbix-mcp_pbix-mcp__` ou, se o usuário já tiver o pbix-mcp configurado, `mcp__pbix-mcp__`. Use um só servidor do começo ao fim: o alias aberto num não existe no outro. Se nenhum estiver conectado, diga o que falta e pare. Não edite o .pbix descompactando ou reescrevendo o arquivo por outros meios, porque o risco de corromper o modelo de dados é real e o usuário perderia o arquivo.
-- Python 3 para os scripts, que ficam na pasta `scripts/` desta skill (`${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/`) e usam só a biblioteca padrão:
+- Os scripts ficam na pasta `scripts/` desta skill (`${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/`) e usam só a biblioteca padrão do Python. Rode-os com `uv run --no-project --quiet <script>`, que funciona igual em macOS, Linux e Windows e baixa um Python se faltar; o `uv` já é exigido para subir o pbix-mcp. Não use `python3` direto: no Windows ele costuma não existir.
   - `inventario_pbix.py`: lê o .pbix como zip, sem gravar nada, e gera o inventário com funções sugeridas;
   - `propor_layout.py`: o motor de layout, que calcula a nova disposição a partir do inventário;
   - `layout_check.py`: calcula o grid (`grid`), confere margem, calha, sobreposições e hierarquia (`check`) e dá a nota de 0 a 100 (`score`);
@@ -39,7 +39,7 @@ Crie o marcador `.pbi-layout-ativo` no diretório de trabalho (`touch .pbi-layou
 
 ### 2. Inventariar
 
-Rode `python inventario_pbix.py <arquivo>.pbix --saida layout_<nome>/layout_antes.json`. Ele registra, por página, nome, tipo (normal, dica de ferramenta, detalhamento), largura e altura; por visual, o nome interno (`id`, estável entre original e cópia), tipo, título, campos, posição absoluta (filhos de grupo já convertidos), grupo, estado oculto e, em segmentadores, o modo (`Dropdown` ou `Basic`) e o campo.
+Rode `uv run --no-project --quiet inventario_pbix.py <arquivo>.pbix --saida layout_<nome>/layout_antes.json`. Ele registra, por página, nome, tipo (normal, dica de ferramenta, detalhamento), largura e altura; por visual, o nome interno (`id`, estável entre original e cópia), tipo, título, campos, posição absoluta (filhos de grupo já convertidos), grupo, estado oculto e, em segmentadores, o modo (`Dropdown` ou `Basic`) e o campo.
 
 Depois abra o arquivo no pbix-mcp (`pbix_open`) e confira o inventário com `pbix_get_pages` e `pbix_get_visual_positions`: as posições têm de bater. Se não baterem, o pbix-mcp manda; corrija o JSON. Para segmentadores em lista vertical, conte os itens que vão aparecer (`pbix_query_table` no campo) e grave em `items`: uma lista com seis itens precisa de altura que uma faixa de KPIs não oferece.
 
@@ -49,7 +49,7 @@ O inventário vem com uma função sugerida (`role`, marcada com `role_sugerido:
 
 | Função | Tipos internos comuns (confirme no arquivo) | Faixa |
 |---|---|---|
-| identidade | `image` (logotipo), `textbox` de título | canto superior esquerdo, compacta; uma faixa de título de borda a borda no topo é aceita como cabeçalho (`full_bleed: true`) |
+| identidade | `image` (logotipo), `textbox` de título | canto superior esquerdo, compacta; um título que ocupa metade da largura ou mais vira faixa de cabeçalho na largura do grid, com data ou subtítulo à direita; uma faixa de borda a borda no topo é aceita como cabeçalho (`full_bleed: true`) |
 | kpi | `card`, `cardVisual`, `multiRowCard`, `kpi`, `gauge` | faixa superior |
 | filtro | `slicer`, `advancedSlicerVisual` | faixa superior, ou coluna de filtros se for lista vertical |
 | tendencia | `lineChart`, `areaChart`, `stackedAreaChart`, combos de linha e coluna | meio |
@@ -68,7 +68,7 @@ Apague os campos `role_sugerido`, `principal_sugerido` e `stack_sugerido` depois
 
 ### 4. Diagnosticar a disposição atual
 
-Rode `python layout_check.py check layout_antes.json` e `python layout_check.py score layout_antes.json`. Liste, por página, os problemas encontrados: bordas desalinhadas, sobreposições, espaçamentos irregulares, visuais encostados na borda, visuais da mesma função com tamanhos diferentes e desvios da hierarquia de leitura. O diagnóstico e a nota de partida vão para o relatório e justificam cada mudança.
+Rode `uv run --no-project --quiet layout_check.py check layout_antes.json` e `uv run --no-project --quiet layout_check.py score layout_antes.json`. Liste, por página, os problemas encontrados: bordas desalinhadas, sobreposições, espaçamentos irregulares, visuais encostados na borda, visuais da mesma função com tamanhos diferentes e desvios da hierarquia de leitura. O diagnóstico e a nota de partida vão para o relatório e justificam cada mudança.
 
 ### 5. Definir e declarar o grid
 
@@ -87,11 +87,11 @@ O padrão do plugin, que os scripts usam quando margem, calha e unidade não sã
 | 1920×1080 | 12 px | 36 px | 24 px | 132 px |
 | 320×240 (dica) | 4 px | 12 px | 8 px | 17 px (sobra na margem direita) |
 
-A segunda linha é a primeira escalada em 1,5, a mesma proporção entre os dois tamanhos de página. Para outros tamanhos, ou para conferir uma escolha diferente, rode `python layout_check.py grid --width W --height H [--margin M --gutter G --columns 12]`: ele devolve a borda de cada coluna, a largura de cada vão de n colunas e avisa quando a coluna não sai inteira (a sobra vai para a margem direita). Páginas de tamanhos diferentes recebem cada uma o seu grid, declarado. Se escolher valores diferentes do padrão, passe os mesmos `--margin --gutter --base` a todos os scripts.
+A segunda linha é a primeira escalada em 1,5, a mesma proporção entre os dois tamanhos de página. Para outros tamanhos, ou para conferir uma escolha diferente, rode `uv run --no-project --quiet layout_check.py grid --width W --height H [--margin M --gutter G --columns 12]`: ele devolve a borda de cada coluna, a largura de cada vão de n colunas e avisa quando a coluna não sai inteira (a sobra vai para a margem direita). Páginas de tamanhos diferentes recebem cada uma o seu grid, declarado. Se escolher valores diferentes do padrão, passe os mesmos `--margin --gutter --base` a todos os scripts.
 
 ### 6. Calcular a nova disposição com o motor e revisar
 
-Rode `python propor_layout.py layout_antes.json --saida layout_proposto.json`. O motor aplica as regras abaixo de forma determinística e devolve a geometria nova de cada visual (com a original em `de`), o grid de cada página e as listas `decisoes` e `limitacoes`. Ele existe para que as contas de grid não sejam feitas de cabeça: a proposta já sai alinhada, com calhas e margens exatas.
+Rode `uv run --no-project --quiet propor_layout.py layout_antes.json --saida layout_proposto.json`. O motor aplica as regras abaixo de forma determinística e devolve a geometria nova de cada visual (com a original em `de`), o grid de cada página e as listas `decisoes` e `limitacoes`. Ele existe para que as contas de grid não sejam feitas de cabeça: a proposta já sai alinhada, com calhas e margens exatas.
 
 A proposta é um ponto de partida, não uma ordem. Revise-a contra as regras abaixo e contra o que você sabe do relatório; quando um caso pedir outra solução (por exemplo, dois gráficos de mesma importância que o motor desigualou por área), edite `layout_proposto.json` à mão mantendo as bordas nas colunas do grid, e registre a decisão. Rode `layout_check.py check` na proposta antes de aplicar: ela precisa sair sem erros.
 
@@ -106,7 +106,7 @@ As regras que o motor aplica e que valem para qualquer ajuste manual:
 **Hierarquia de leitura, em Z**
 - Quadrante superior esquerdo: a informação mais importante da página. Se houver logotipo ou título, ele ocupa o canto de forma compacta e o KPI principal vem logo à direita, como primeiro cartão da faixa, para que a primeira leitura seja de dado e não só de marca.
 - Faixa superior: cartões de grandes números e segmentadores em lista suspensa, em linha. Ordem dentro da faixa: identidade, KPI principal, demais KPIs, segmentadores no fim da faixa. Quando não cabem todos com pelo menos duas colunas cada, os segmentadores vão para uma segunda linha estreita ainda dentro da faixa superior.
-- Segmentador em lista vertical: coluna de filtros à direita, com duas colunas do grid, que começa na faixa superior (o segundo ponto do Z) e desce até a base. Quando a coluna existe, os segmentadores em lista suspensa abrem a coluna no alto e a nota metodológica a fecha embaixo. Mudar o modo do segmentador para lista suspensa caberia na faixa, mas é formatação e está fora do escopo: registre essa alternativa no relatório para o usuário decidir.
+- Segmentador em lista vertical que cabe na altura da faixa superior (pelos itens em `items`, ou pela altura que o autor já deu a ele) fica na faixa, como os de lista suspensa. O que não cabe vai para a coluna de filtros à direita, com duas colunas do grid, que começa na faixa superior (o segundo ponto do Z) e desce até a base. Quando a coluna existe, os segmentadores em lista suspensa abrem a coluna no alto e a nota metodológica a fecha embaixo. Mudar o modo do segmentador para lista suspensa caberia na faixa, mas é formatação e está fora do escopo: registre essa alternativa no relatório para o usuário decidir.
 - Filtros de mesmo campo ocupam a mesma posição e o mesmo tamanho em todas as páginas do mesmo tamanho, porque o usuário aprende onde eles ficam. Quando isso sobreporia outro visual, o motor registra a exceção.
 - Meio: gráficos de tendência e comparações principais. O gráfico mais importante fica à esquerda e com mais área (8 de 12 colunas, com um gráfico de apoio nas 4 restantes); dois gráficos de mesma importância dividem a largura igualmente.
 - Base: visuais secundários à esquerda e tabelas e matrizes à direita, com o dobro do peso, ou a largura toda quando sozinhas, porque precisam de colunas legíveis.
@@ -133,13 +133,13 @@ Salve em `<nome_original>_reorganizado.pbix` com `overwrite=False`, sem sobrescr
 
 Delegue a conferência ao subagente `auditor-layout` do plugin, passando o caminho do original, o da cópia e o de `layout_proposto.json`. Ele trabalha sem a memória desta sessão: lê a cópia direto do arquivo, roda `compare_pbix.py`, `layout_check.py check` e `score`, compara com a proposta e devolve um veredito. Se o subagente não estiver disponível, faça você mesmo os mesmos passos:
 
-1. `python compare_pbix.py <original>.pbix <cópia>.pbix`: o resultado precisa ser `ok`, com as mudanças listadas apenas em `geometria`. Qualquer item em `outras_mudancas` viola o contrato da skill: refaça a partir do original. A ferramenta `pbix_diff` do pbix-mcp serve como checagem complementar do modelo e das medidas, mas ela não compara posições e responde "sem mudanças" mesmo depois de uma reorganização correta, então não basta sozinha.
-2. `python inventario_pbix.py <cópia>.pbix --sem-sugestoes --saida layout_depois.json`, copie para ele as funções, `principal` e `stack` de `layout_proposto.json` (pelo `id`) e rode `python layout_check.py check layout_depois.json --before layout_antes.json`. Se houver formas de fundo, acrescente `--allow-gap` com os espaçamentos que a folga delas cria. Corrija o que o script apontar como erro (sobreposição, visual fora da página, visual perdido ou com tipo trocado, empilhamento quebrado); avisos podem ser aceitos com justificativa no relatório.
-3. `python layout_check.py score layout_depois.json --before layout_antes.json` para a nota antes e depois.
+1. `uv run --no-project --quiet compare_pbix.py <original>.pbix <cópia>.pbix`: o resultado precisa ser `ok`, com as mudanças listadas apenas em `geometria`. Qualquer item em `outras_mudancas` viola o contrato da skill: refaça a partir do original. A ferramenta `pbix_diff` do pbix-mcp serve como checagem complementar do modelo e das medidas, mas ela não compara posições e responde "sem mudanças" mesmo depois de uma reorganização correta, então não basta sozinha.
+2. `uv run --no-project --quiet inventario_pbix.py <cópia>.pbix --sem-sugestoes --saida layout_depois.json`, copie para ele as funções, `principal` e `stack` de `layout_proposto.json` (pelo `id`) e rode `uv run --no-project --quiet layout_check.py check layout_depois.json --before layout_antes.json`. Se houver formas de fundo, acrescente `--allow-gap` com os espaçamentos que a folga delas cria. Corrija o que o script apontar como erro (sobreposição, visual fora da página, visual perdido ou com tipo trocado, empilhamento quebrado); avisos podem ser aceitos com justificativa no relatório.
+3. `uv run --no-project --quiet layout_check.py score layout_depois.json --before layout_antes.json` para a nota antes e depois.
 
 Se o auditor apontar erros, corrija com `pbix_move_visual` a partir de uma nova abertura da cópia, salve como `_reorganizado_2.pbix` e confira de novo.
 
-Por fim, gere o esquema com `python preview_layout.py layout_antes.json layout_proposto.json antes_depois.html`, entregue-o ao usuário e apague o marcador `.pbi-layout-ativo`.
+Por fim, gere o esquema com `uv run --no-project --quiet preview_layout.py layout_antes.json layout_proposto.json antes_depois.html`, entregue-o ao usuário e apague o marcador `.pbi-layout-ativo`.
 
 ## Relatório final
 

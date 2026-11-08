@@ -1,0 +1,19 @@
+{
+  "pages": [
+    {
+      "name": "Vendas globais", "type": "normal", "width": 1280, "height": 720,
+      "visuals": [
+        {"id": "titulo", "type": "textbox", "role": "identidade", "x": 16, "y": 16, "width": 1032, "height": 72},
+        {"id": "data", "type": "textbox", "role": "identidade", "x": 1064, "y": 16, "width": 200, "height": 72},
+        {"id": "total", "type": "card", "role": "kpi", "principal": true, "x": 16, "y": 104, "width": 300, "height": 128},
+        {"id": "f1", "type": "slicer", "role": "filtro", "slicer_mode": "Basic", "x": 332, "y": 104, "width": 300, "height": 128},
+        {"id": "f2", "type": "slicer", "role": "filtro", "slicer_mode": "Basic", "x": 648, "y": 104, "width": 300, "height": 128},
+        {"id": "f3", "type": "slicer", "role": "filtro", "slicer_mode": "Basic", "items": 30, "x": 964, "y": 104, "width": 300, "height": 128},
+        {"id": "barras", "type": "barChart", "role": "comparacao", "x": 16, "y": 248, "width": 616, "height": 248},
+        {"id": "desc", "type": "clusteredBarChart", "role": "comparacao", "x": 648, "y": 248, "width": 616, "height": 248},
+        {"id": "mapa", "type": "map", "role": "secundario", "x": 16, "y": 512, "width": 616, "height": 192},
+        {"id": "pizza", "type": "pieChart", "role": "secundario", "x": 648, "y": 512, "width": 616, "height": 192}
+      ]
+    }
+  ]
+}
