@@ -1,4 +1,8 @@
-# Power BI Layout — plugin para o Claude Code
+# Power BI Layout Agent — plugin para o Claude Code
+
+[![testes](https://github.com/fernandofigueiredo-data/powerbi-layout-agent-automation/actions/workflows/testes.yml/badge.svg)](https://github.com/fernandofigueiredo-data/powerbi-layout-agent-automation/actions/workflows/testes.yml)
+![versão](https://img.shields.io/badge/vers%C3%A3o-0.3.0-blue)
+![licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
 
 Reorganiza o layout de qualquer relatório Power BI (`.pbix`) com o
 [pbix-mcp](https://pypi.org/project/pbix-mcp/): **grid de 12 colunas,
@@ -9,6 +13,14 @@ A regra que não se negocia: **só a geometria muda** (x, y, largura, altura).
 Dados, medidas, filtros, formatação, cores, títulos, tema, bookmarks e tamanho
 das páginas ficam intactos, e o resultado vai para uma cópia
 `<nome>_reorganizado.pbix`. O original não é tocado.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/antes_depois_escuro.png">
+  <img alt="Esquema da mesma página antes e depois da reorganização. Antes, nota 49: tabela no canto superior esquerdo, logotipo sobre o gráfico de linha, visuais desalinhados e com espaçamentos diferentes. Depois, nota 100: logotipo, três KPIs e o segmentador numa faixa no topo; gráfico de linha e de barras no meio; pizza e tabela na base, todos alinhados às 12 colunas do grid." src="docs/antes_depois_claro.png">
+</picture>
+
+*Esquema gerado pelo plugin para o exemplo do repositório: cada retângulo é um
+visual, colorido pela função. As faixas no "Depois" são as 12 colunas do grid.*
 
 ## O problema
 
@@ -46,9 +58,15 @@ uv run --no-project plugins/powerbi-layout-agent-automation/skills/reorganizar-l
 ```
 
 Troque `layout_antes.json` por `layout_proposto.json` para ver a nota depois.
-O esquema visual de antes e depois está em
+A versão interativa do esquema, com as decisões e limitações do motor, está em
 [docs/exemplo_antes_depois.html](docs/exemplo_antes_depois.html) (baixe o
-arquivo e abra no navegador).
+arquivo e abra no navegador). O esquema arredonda a nota de 48,9 para 49.
+
+A nota mede a aderência às regras desta página, e o motor aplica essas mesmas
+regras, então 100 na proposta é o esperado: prova consistência, não
+legibilidade percebida. A checagem de erros (sobreposição, visual fora da
+margem, espaçamento fora da calha) é objetiva. A conferência visual final é
+no Power BI Desktop, porque o pbix-mcp não renderiza páginas.
 
 ## Regras de layout aplicadas
 
@@ -78,6 +96,31 @@ casos especiais, está em **[docs/regras-de-layout.md](docs/regras-de-layout.md)
    bloco e a navegação fica fixa no rodapé.
 10. **O que exige mudar formatação vira recomendação**, como trocar um
     segmentador de lista por lista suspensa. O plugin registra, não aplica.
+
+## Decisões de projeto
+
+| Decisão | Por quê |
+|---|---|
+| **Só a geometria muda** | Quem pede uma reorganização quer o mesmo relatório, mais legível. Qualquer mudança em dados ou formatação obrigaria o autor a reauditar o conteúdo, o que anula o ganho. |
+| **Um script prova o contrato** | O `pbix_diff` do pbix-mcp não compara posições e responde "sem mudanças" mesmo depois de uma reorganização. `compare_pbix.py` compara original e cópia arquivo por arquivo e só aceita diferença de posição e tamanho. |
+| **As contas ficam num motor determinístico, não no modelo** | O Claude classifica cada visual e revisa os casos ambíguos; as coordenadas vêm de `propor_layout.py`, que dá sempre a mesma saída para a mesma entrada (há teste para isso) e pode ser conferido por aritmética. |
+| **Unidade-base de 8 px** | É convenção de comunidade, não norma da Microsoft. Foi adotada porque torna o alinhamento verificável: toda borda é múltipla da unidade. |
+| **Conferência por um auditor independente** | Um subagente sem a memória da sessão relê a cópia salva, roda as checagens e compara com a proposta, para não confirmar o próprio trabalho. |
+| **Divergências entre fontes resolvidas por escrito** | A SQLBI recomenda tirar logotipos e segmentadores da área de visão geral; aqui, a identidade fica compacta no canto e o KPI principal vem logo ao lado, para que a primeira leitura seja de dado. Segmentadores ficam no topo, e listas longas vão para uma coluna à direita. Fontes e escolhas em [boas-praticas-layout.md](plugins/powerbi-layout-agent-automation/skills/reorganizar-layout-power-bi/references/boas-praticas-layout.md#8-divergências-entre-fontes). |
+
+## Como foi construído
+
+O plugin foi desenvolvido com o Claude Code, que aparece como coautor nos
+commits. Do autor vêm:
+
+- as preferências de layout registradas como "preferência do autor" na tabela
+  de divergências entre fontes: identidade ou KPI no canto superior esquerdo,
+  segmentadores no topo e tabelas na base;
+- a validação em uso real: a coluna de filtros foi testada num painel real com
+  dois tamanhos de página, e a versão 0.2.0, de ponta a ponta num .pbix de
+  casos difíceis (seis KPIs, grupos redimensionados, visuais alternados por
+  bookmark, formas de fundo, botões de navegação e página 4:3), que virou a
+  fixture `tests/fixtures/casos_pbix.json`.
 
 ## O que tem de diferente
 
@@ -196,6 +239,8 @@ plugins/powerbi-layout-agent-automation/
 docs/
   regras-de-layout.md                    # as regras aplicadas, para quem usa o plugin
   exemplo_antes_depois.html              # esquema visual do exemplo
+  antes_depois_claro.png, _escuro.png    # o mesmo esquema em imagem, para o README
+.github/workflows/testes.yml             # testes em Linux, macOS e Windows
 tests/                                   # unittest, sem dependências
   fixtures/casos_pbix.json               # inventário real de um .pbix de casos difíceis
 ```

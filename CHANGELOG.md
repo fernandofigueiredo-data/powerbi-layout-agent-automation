@@ -11,6 +11,9 @@
   escritas para quem usa o plugin. O README ganhou o problema que o plugin
   resolve, o resultado medido no exemplo (nota 48,9 → 100) e um resumo das
   regras.
+- README com imagem do antes e depois (tema claro e escuro), o que a nota mede
+  e o que não mede, decisões de projeto e como o plugin foi construído.
+- CI no GitHub Actions: testes em Linux, macOS e Windows, com badge no README.
 
 ## 0.2.0 — 2026-11-08
 
