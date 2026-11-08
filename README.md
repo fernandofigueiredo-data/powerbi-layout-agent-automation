@@ -110,8 +110,7 @@ casos especiais, está em **[docs/regras-de-layout.md](docs/regras-de-layout.md)
 
 ## Como foi construído
 
-O plugin foi desenvolvido com o Claude Code, que aparece como coautor nos
-commits. Do autor vêm:
+O plugin foi desenvolvido com o auxílio do Claude Code. Do autor:
 
 - as preferências de layout registradas como "preferência do autor" na tabela
   de divergências entre fontes: identidade ou KPI no canto superior esquerdo,
