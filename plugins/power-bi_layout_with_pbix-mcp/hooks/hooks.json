@@ -1,0 +1,18 @@
+{
+  "description": "Guardião do layout: pede confirmação antes de sobrescrever o .pbix original e, durante uma reorganização, antes de ferramentas do pbix-mcp que mudam algo além da geometria",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^mcp__(plugin_.+_)?pbix-mcp__pbix_.+$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/skills/reorganizar-layout-power-bi/scripts/hook_guardiao.py"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

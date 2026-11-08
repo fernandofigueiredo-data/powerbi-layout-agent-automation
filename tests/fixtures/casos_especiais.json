@@ -1,0 +1,27 @@
+{
+  "pages": [
+    {
+      "name": "Painel", "type": "normal", "width": 1280, "height": 720,
+      "visuals": [
+        {"id": "fundo", "type": "shape", "role": "container", "x": 0, "y": 0, "width": 640, "height": 140},
+        {"id": "c1", "type": "card", "role": "kpi", "principal": true, "x": 10, "y": 10, "width": 200, "height": 100},
+        {"id": "c2", "type": "card", "role": "kpi", "x": 220, "y": 10, "width": 200, "height": 100},
+        {"id": "linhaA", "type": "lineChart", "role": "tendencia", "stack": "alt-1", "x": 20, "y": 160, "width": 700, "height": 300},
+        {"id": "linhaB", "type": "areaChart", "role": "tendencia", "stack": "alt-1", "x": 20, "y": 160, "width": 700, "height": 300, "hidden": true},
+        {"id": "grp", "type": "group", "role": "secundario", "is_group": true, "x": 740, "y": 160, "width": 500, "height": 300},
+        {"id": "g1", "type": "pieChart", "role": "secundario", "parent": "grp", "x": 740, "y": 160, "width": 250, "height": 300, "rel_x": 0, "rel_y": 0},
+        {"id": "g2", "type": "donutChart", "role": "secundario", "parent": "grp", "x": 990, "y": 160, "width": 250, "height": 300, "rel_x": 250, "rel_y": 0},
+        {"id": "nav1", "type": "actionButton", "role": "navegacao", "title": "Início", "x": 1100, "y": 10, "width": 80, "height": 30},
+        {"id": "nav2", "type": "actionButton", "role": "navegacao", "title": "Detalhe", "x": 1190, "y": 10, "width": 80, "height": 30},
+        {"id": "mat", "type": "pivotTable", "role": "detalhe", "x": 20, "y": 480, "width": 1200, "height": 220}
+      ]
+    },
+    {
+      "name": "Dica", "type": "tooltip", "width": 320, "height": 240,
+      "visuals": [
+        {"id": "t1", "type": "card", "role": "kpi", "x": 3, "y": 7, "width": 150, "height": 90},
+        {"id": "t2", "type": "lineChart", "role": "tendencia", "x": 5, "y": 103, "width": 310, "height": 130}
+      ]
+    }
+  ]
+}

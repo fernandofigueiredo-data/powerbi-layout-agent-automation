@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+*.pbix
+*.pbit
+*.bak
+layout_*/
+.pbi-layout-ativo

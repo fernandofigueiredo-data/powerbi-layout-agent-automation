@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pbix-mcp": {
+      "command": "uvx",
+      "args": ["--from", "pbix-mcp==0.9.153", "pbix-mcp-server"]
+    }
+  }
+}

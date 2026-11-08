@@ -1,0 +1,29 @@
+{
+  "pages": [
+    {
+      "name": "Sistema", "type": "normal", "width": 1920, "height": 1080,
+      "visuals": [
+        {"id": "titulo", "type": "textbox", "role": "identidade", "full_bleed": true, "x": 0, "y": 0, "width": 1920, "height": 86},
+        {"id": "k1", "type": "cardVisual", "role": "kpi", "principal": true, "x": 348, "y": 106, "width": 294, "height": 133},
+        {"id": "k2", "type": "cardVisual", "role": "kpi", "x": 660, "y": 106, "width": 294, "height": 133},
+        {"id": "k3", "type": "cardVisual", "role": "kpi", "x": 972, "y": 106, "width": 294, "height": 133},
+        {"id": "seg", "type": "slicer", "role": "filtro", "slicer_mode": "Basic", "items": 6, "field": "ifdata.Segmento", "x": 24, "y": 106, "width": 300, "height": 330},
+        {"id": "uf", "type": "slicer", "role": "filtro", "slicer_mode": "Dropdown", "field": "ifdata.UF", "x": 24, "y": 700, "width": 300, "height": 105},
+        {"id": "barras", "type": "barChart", "role": "comparacao", "x": 348, "y": 262, "width": 780, "height": 420},
+        {"id": "rosca", "type": "donutChart", "role": "secundario", "x": 1146, "y": 262, "width": 744, "height": 420},
+        {"id": "tabela", "type": "tableEx", "role": "detalhe", "x": 348, "y": 700, "width": 1542, "height": 340},
+        {"id": "fonte", "type": "textbox", "role": "nota", "x": 348, "y": 1048, "width": 1542, "height": 26}
+      ]
+    },
+    {
+      "name": "Rentabilidade", "type": "normal", "width": 1920, "height": 1080,
+      "visuals": [
+        {"id": "titulo2", "type": "textbox", "role": "identidade", "full_bleed": true, "x": 0, "y": 0, "width": 1920, "height": 86},
+        {"id": "seg2", "type": "slicer", "role": "filtro", "slicer_mode": "Basic", "items": 6, "field": "ifdata.Segmento", "x": 24, "y": 106, "width": 300, "height": 330},
+        {"id": "uf2", "type": "slicer", "role": "filtro", "slicer_mode": "Dropdown", "field": "ifdata.UF", "x": 24, "y": 700, "width": 300, "height": 105},
+        {"id": "colunas", "type": "columnChart", "role": "comparacao", "x": 348, "y": 106, "width": 1542, "height": 330},
+        {"id": "disp", "type": "scatterChart", "role": "secundario", "x": 348, "y": 454, "width": 1542, "height": 580}
+      ]
+    }
+  ]
+}
