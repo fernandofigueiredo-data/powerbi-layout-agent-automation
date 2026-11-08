@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Calcula o grid, confere o layout e dá uma nota de 0 a 100 às páginas de um relatório Power BI.
 
-Uso:
-  python layout_check.py grid --width 1280 --height 720 [--margin 24 --gutter 16 --columns 12]
-  python layout_check.py check layout_depois.json [--margin M --gutter G --base U]
-                                [--before layout_antes.json] [--allow-gap 32]
-  python layout_check.py score layout_depois.json [--before layout_antes.json] [mesmas opções]
+Uso (com uv, que funciona igual em macOS, Linux e Windows):
+  uv run --no-project --quiet layout_check.py grid --width 1280 --height 720
+         [--margin 24 --gutter 16 --base 8 --columns 12]
+  uv run --no-project --quiet layout_check.py check layout_depois.json
+         [--before layout_antes.json] [--allow-gap 32] [--margin M --gutter G --base U --columns N]
+  uv run --no-project --quiet layout_check.py score layout_depois.json
+         [--before layout_antes.json] [mesmas opções do check]
 
-Margem, calha e unidade-base omitidas usam o grid padrão de cada página
-(proporcional ao tamanho: 1280×720 → 24/16/8; 1920×1080 → 36/24/12; páginas de
-dica 320×240 → 12/8/4). Informadas, valem para todas as páginas.
+Margem, calha e unidade-base omitidas usam o grid padrão de cada página (ver
+_grid.py: 1280×720 → unidade 8, margens 24, calha 16, coluna 88; 1920×1080 →
+12, 36, 24, 132; 1024×768 → 8, margens laterais 40, calha 16, coluna 64; dica
+320×240 → 4, margens laterais 20, calha 8, coluna 16). Informadas, valem para
+todas as páginas.
 
 O formato do JSON de layout está em references/pbix-mcp-operacoes.md.
 
@@ -45,12 +49,14 @@ PESOS = {"alinhamento": 25, "espaco": 20, "integridade": 20, "hierarquia": 20, "
 
 
 def grid(args):
-    g = grid_padrao(args.width, args.height, colunas=args.columns, margem=args.margin, calha=args.gutter)
+    g = grid_padrao(args.width, args.height, colunas=args.columns, margem=args.margin, calha=args.gutter,
+                    base=args.base)
     spans = {str(n): n * g["largura_coluna"] + (n - 1) * g["calha"] for n in range(1, args.columns + 1)}
     out = {
         "pagina": [args.width, args.height],
         "unidade_base": g["base"],
-        "margem": g["margem"],
+        "margem_superior_inferior": g["margem"],
+        "margem_esquerda": g["margem_esquerda"],
         "margem_direita": g["margem_direita"],
         "calha": g["calha"],
         "area_util": g["area_util"],
@@ -58,6 +64,10 @@ def grid(args):
         "colunas": [{"coluna": i + 1, "x": x, "largura": g["largura_coluna"]} for i, x in enumerate(g["x_colunas"])],
         "largura_por_numero_de_colunas": spans,
     }
+    if g["automatico"] and g["margem_esquerda"] != g["margem"]:
+        out["nota"] = (f"Para a coluna ser múltipla da unidade ({g['base']} px), a sobra da largura foi para as "
+                       f"margens laterais: {g['margem_esquerda']} px à esquerda e {g['margem_direita']} px à "
+                       "direita.")
     if abs(g["largura_coluna_exata"] - g["largura_coluna"]) > 0.01:
         out["aviso"] = (f"A largura exata da coluna seria {g['largura_coluna_exata']} px. Arredondada para "
                         f"{g['largura_coluna']} px, com a sobra na margem direita ({g['margem_direita']} px). "
@@ -88,8 +98,8 @@ def multiplo(valor, base):
 
 
 def config_pagina(p, args):
-    g = grid_padrao(p["width"], p["height"], margem=args.margin, calha=args.gutter, base=args.base)
-    return g
+    return grid_padrao(p["width"], p["height"], colunas=getattr(args, "columns", None) or 12,
+                       margem=args.margin, calha=args.gutter, base=args.base)
 
 
 def analisar(p, args):
@@ -125,8 +135,9 @@ def analisar(p, args):
             mt["base_ok"] += ok
             mt["margem_ok"] += 1
             continue
-        if x0 < m - TOL or y0 < m - TOL or x1 > W - g["margem_direita"] + TOL or y1 > H - m + TOL:
-            warnings.append(f"[{name}] {label(v)} invade a margem de {m} px.")
+        if (x0 < g["margem_esquerda"] - TOL or y0 < m - TOL or x1 > W - g["margem_direita"] + TOL
+                or y1 > H - m + TOL):
+            warnings.append(f"[{name}] {label(v)} invade a margem da página.")
         else:
             mt["margem_ok"] += 1
         fora = [k for k in ("x", "y", "width", "height") if not multiplo(v[k], base)]
@@ -336,6 +347,7 @@ def main():
     g.add_argument("--height", type=float, required=True)
     g.add_argument("--margin", type=float)
     g.add_argument("--gutter", type=float)
+    g.add_argument("--base", type=float)
     g.add_argument("--columns", type=int, default=12)
     for nome, ajuda in (("check", "confere um layout"), ("score", "nota de 0 a 100 do layout")):
         c = sub.add_parser(nome, help=ajuda)
@@ -343,6 +355,7 @@ def main():
         c.add_argument("--margin", type=float)
         c.add_argument("--gutter", type=float)
         c.add_argument("--base", type=float)
+        c.add_argument("--columns", type=int, default=12)
         c.add_argument("--before")
         c.add_argument("--allow-gap", type=float, action="append", default=[],
                        help="espaçamento adicional aceito (por exemplo, folga de container)")

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Lê um .pbix (só leitura) e gera o inventário de layout com funções sugeridas.
 
-Uso:
-  python inventario_pbix.py relatorio.pbix --saida layout_antes.json
+Uso (com uv, que funciona igual em macOS, Linux e Windows):
+  uv run --no-project --quiet inventario_pbix.py relatorio.pbix --saida layout_antes.json
+  uv run --no-project --quiet inventario_pbix.py copia_reorganizada.pbix --herdar layout_proposto.json \
+         --saida layout_depois.json
 
 Abre o arquivo como zip e não grava nada nele. Cobre os dois formatos:
 - PBIR (Report/definition/pages/<página>/page.json e visuals/<visual>/visual.json)
@@ -15,11 +17,17 @@ partir do tipo e da posição, e marca como `principal` o primeiro KPI na ordem 
 leitura. As sugestões ficam marcadas em `role_sugerido: true`: quem conduz a
 reorganização confere e corrige antes de rodar o motor de layout.
 
+Com --herdar, as decisões de outro JSON de layout (a proposta) passam para o
+inventário pelo `id`: role, principal, stack, full_bleed e items. As marcas de
+sugestão saem, e `decisoes` e `limitacoes` são copiadas. É o que gera o
+layout_depois.json da conferência sem edição manual.
+
 O formato de saída é o de references/pbix-mcp-operacoes.md.
 """
 
 import argparse
 import json
+import os
 import sys
 import zipfile
 
@@ -289,11 +297,43 @@ def sugerir_roles(page):
                 v["stack_sugerido"] = True
 
 
+CAMPOS_HERDADOS = ("role", "principal", "stack", "full_bleed", "items")
+MARCAS = ("role_sugerido", "principal_sugerido", "stack_sugerido")
+
+
+def herdar(doc, caminho):
+    """Copia as decisões de outro JSON de layout, pelo id, e tira as marcas de sugestão."""
+    with open(caminho, encoding="utf-8") as f:
+        fonte = json.load(f)
+    por_id = {str(v.get("id")): v for p in fonte.get("pages", []) for v in p.get("visuals", [])}
+    faltando = []
+    for p in doc["pages"]:
+        for v in p["visuals"]:
+            ref = por_id.get(str(v["id"]))
+            if ref is None:
+                faltando.append(v["id"])
+                continue
+            for campo in CAMPOS_HERDADOS:
+                if campo in ref:
+                    v[campo] = ref[campo]
+                else:
+                    v.pop(campo, None)
+            for marca in MARCAS:
+                v.pop(marca, None)
+    for chave in ("decisoes", "limitacoes"):
+        if chave in fonte:
+            doc[chave] = fonte[chave]
+    if faltando:
+        doc["sem_correspondencia"] = faltando
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("pbix")
     ap.add_argument("--saida", help="arquivo JSON de saída (padrão: imprime na tela)")
     ap.add_argument("--sem-sugestoes", action="store_true", help="não sugere role/principal/stack")
+    ap.add_argument("--herdar", help="JSON de layout (a proposta) de onde copiar role, principal, stack, "
+                                     "full_bleed e items, pelo id")
     args = ap.parse_args()
     z = zipfile.ZipFile(args.pbix)
     nomes = z.namelist()
@@ -309,8 +349,12 @@ def main():
         if not args.sem_sugestoes:
             sugerir_roles(p)
     doc = {"arquivo": args.pbix, "formato": formato, "pages": pages}
+    if args.herdar:
+        herdar(doc, args.herdar)
     texto = json.dumps(doc, ensure_ascii=False, indent=2)
     if args.saida:
+        # A pasta de trabalho é criada aqui, para o fluxo não depender de mkdir.
+        os.makedirs(os.path.dirname(os.path.abspath(args.saida)), exist_ok=True)
         with open(args.saida, "w", encoding="utf-8") as f:
             f.write(texto)
         print(args.saida)

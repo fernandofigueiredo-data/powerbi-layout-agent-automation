@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """Gera um esquema visual (HTML) do antes e depois a partir dos JSONs de layout.
 
-Uso:
-  python preview_layout.py layout_antes.json layout_depois.json saida.html
-  python preview_layout.py layout_antes.json saida.html          (só o estado atual)
+Uso (com uv, que funciona igual em macOS, Linux e Windows):
+  uv run --no-project --quiet preview_layout.py layout_antes.json layout_depois.json saida.html
+         [--proposta layout_proposto.json] [--allow-gap 8] [--margin M --gutter G --base U --columns N]
+  uv run --no-project --quiet preview_layout.py layout_antes.json saida.html   (só o estado atual)
 
 O pbix-mcp não renderiza páginas. Este esquema desenha cada visual como um
 retângulo colorido pela função, com o título, sobre as colunas do grid, e mostra
 a nota de layout (0–100) de cada lado, para que o usuário avalie a composição
 antes de abrir o Power BI Desktop. As páginas são pareadas pelo nome, não pela
-ordem, porque a ordem dos arquivos no .pbix pode mudar ao salvar. Se o JSON do
-depois trouxer `decisoes` e `limitacoes` (saída do propor_layout.py), elas
-aparecem no fim. Funciona em tema claro e escuro.
+ordem, porque a ordem dos arquivos no .pbix pode mudar ao salvar. As `decisoes`
+e `limitacoes` do motor aparecem no fim: vêm do JSON do depois ou, se ele não as
+tiver (o inventário da cópia salva não tem), de --proposta. A nota e as colunas
+desenhadas usam as mesmas opções do layout_check.py, para que o número do HTML
+seja o mesmo do relatório. Funciona em tema claro e escuro.
 """
 
 import argparse
@@ -21,8 +24,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _grid import grid_padrao  # noqa: E402
-from layout_check import analisar, nota_pagina  # noqa: E402
+from layout_check import analisar, config_pagina, nota_pagina  # noqa: E402
 
 CORES = {
     "identidade": "#1F3A5F", "kpi": "#2E8B8B", "filtro": "#B8901C",
@@ -50,7 +52,9 @@ ul{padding-left:20px;line-height:1.5}li{margin:2px 0}
 
 
 class Opcoes:
+    """Mesmas opções do layout_check.py (padrão: grid automático de cada página)."""
     margin = gutter = base = None
+    columns = 12
     allow_gap = []
 
 
@@ -65,8 +69,7 @@ def page_svg(p, rotulo, mostrar_grid):
               f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="{html.escape(rotulo)}">'
               f'<rect width="{w}" height="{h}" fill="var(--page)" stroke="var(--edge)" stroke-width="2"/>']
     if mostrar_grid and p.get("type", "normal") == "normal":
-        g = grid_padrao(w, h, margem=(p.get("grid") or {}).get("margem"),
-                        calha=(p.get("grid") or {}).get("calha"), base=(p.get("grid") or {}).get("base"))
+        g = config_pagina(p, Opcoes)
         for x in g["x_colunas"]:
             partes.append(f'<rect x="{x}" y="0" width="{g["largura_coluna"]}" height="{h}" fill="var(--col)"/>')
     vis = [v for v in p["visuals"] if not v.get("parent")]
@@ -91,7 +94,7 @@ def media(pages):
     return sum(nota(p) for p in pages) / len(pages) if pages else 0.0
 
 
-def gerar(antes, depois, saida):
+def gerar(antes, depois, saida, proposta=None):
     legenda = "".join(f'<span><i style="background:{c}"></i>{r}</span>' for r, c in CORES.items())
     corpo = ""
     na = media(antes["pages"])
@@ -111,7 +114,7 @@ def gerar(antes, depois, saida):
             corpo += page_svg(d, "Depois", True) if d else "<p>Página ausente no depois.</p>"
         corpo += "</div>"
     for chave, titulo in (("decisoes", "Decisões"), ("limitacoes", "Limitações")):
-        itens = (depois or {}).get(chave) or []
+        itens = (depois or {}).get(chave) or (proposta or {}).get(chave) or []
         if itens:
             corpo += f"<h2>{titulo}</h2><ul>" + "".join(f"<li>{html.escape(i)}</li>" for i in itens) + "</ul>"
     doc = ('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
@@ -121,6 +124,7 @@ def gerar(antes, depois, saida):
            '<p class="sub">Esquema por coordenadas: cada retângulo é um visual, colorido pela função. '
            'As faixas claras no depois são as colunas do grid. Confira o resultado final no Power BI Desktop.</p>'
            f'<div class="lg">{legenda}<span>★ visual principal</span></div>{corpo}</main></body></html>')
+    os.makedirs(os.path.dirname(os.path.abspath(saida)), exist_ok=True)
     with open(saida, "w", encoding="utf-8") as f:
         f.write(doc)
     print(saida)
@@ -129,7 +133,17 @@ def gerar(antes, depois, saida):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("arquivos", nargs="+", help="antes.json [depois.json] saida.html")
-    a = ap.parse_args().arquivos
+    ap.add_argument("--proposta", help="layout_proposto.json, de onde vêm decisões e limitações")
+    ap.add_argument("--margin", type=float)
+    ap.add_argument("--gutter", type=float)
+    ap.add_argument("--base", type=float)
+    ap.add_argument("--columns", type=int, default=12)
+    ap.add_argument("--allow-gap", type=float, action="append", default=[],
+                    help="espaçamento adicional aceito na nota (folga de formas de fundo)")
+    args = ap.parse_args()
+    for k in ("margin", "gutter", "base", "columns", "allow_gap"):
+        setattr(Opcoes, k, getattr(args, k))
+    a = args.arquivos
     if len(a) not in (2, 3):
         print(__doc__)
         return 2
@@ -139,7 +153,11 @@ def main():
     if len(a) == 3:
         with open(a[1], encoding="utf-8") as f:
             depois = json.load(f)
-    gerar(antes, depois, a[-1])
+    proposta = None
+    if args.proposta:
+        with open(args.proposta, encoding="utf-8") as f:
+            proposta = json.load(f)
+    gerar(antes, depois, a[-1], proposta)
     return 0
 
 

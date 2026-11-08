@@ -1,12 +1,15 @@
 {
-  "name": "power-bi_layout_with_pbix-mcp",
-  "description": "Plugin de reorganização de layout de relatórios Power BI com o pbix-mcp",
+  "name": "power-bi-layout-with-pbix-mcp",
   "owner": {
     "name": "Fernando Figueiredo"
   },
+  "metadata": {
+    "description": "Plugin de reorganização de layout de relatórios Power BI com o pbix-mcp",
+    "version": "0.2.0"
+  },
   "plugins": [
     {
-      "name": "power-bi_layout_with_pbix-mcp",
+      "name": "power-bi-layout-with-pbix-mcp",
       "source": "./plugins/power-bi_layout_with_pbix-mcp",
       "description": "Reorganiza o layout de relatórios Power BI: grid, alinhamento, margens, tamanho proporcional e leitura em Z, sem tocar em dados ou formatação"
     }

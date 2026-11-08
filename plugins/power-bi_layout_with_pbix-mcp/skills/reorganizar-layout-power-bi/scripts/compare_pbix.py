@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Confirma que dois .pbix diferem apenas na geometria dos visuais.
 
-Uso:
-  python compare_pbix.py original.pbix reorganizado.pbix
+Uso (com uv, que funciona igual em macOS, Linux e Windows):
+  uv run --no-project --quiet compare_pbix.py original.pbix reorganizado.pbix
 
 Por que existe: o pbix_diff do pbix-mcp compara modelo, medidas, páginas e
 visuais, mas não posições; ele responde "sem mudanças" mesmo depois da
@@ -14,8 +14,10 @@ Cobre os dois formatos de relatório:
 - PBIR (Report/definition/pages/<página>/visuals/<visual>/visual.json)
 - legado (Report/Layout, JSON em UTF-16 LE)
 
-Saída: JSON com "geometria" (o que mudou de lugar), "outras_mudancas"
-(violam o contrato da skill) e "info". Código de saída 1 se houver outras mudanças.
+Saída: JSON com "geometria" (o que mudou de lugar), "camada" (visuais cuja
+ordem de camada, z, mudou: o contrato só permite isso em formas de fundo, então
+confira cada um), "outras_mudancas" (violam o contrato da skill) e "info".
+Código de saída 1 se houver outras mudanças.
 """
 
 import json
@@ -95,6 +97,8 @@ def main(a_path, b_path):
             out["info"].append(f"{n}: só a formatação do JSON mudou")
         else:
             out["outras_mudancas"].append(f"{n}: conteúdo diferente")
+    out["camada"] = [g["visual"] for g in out["geometria"]
+                     if (g["antes"] or {}).get("z") != (g["depois"] or {}).get("z")]
     out["resultado"] = "ok" if not out["outras_mudancas"] else "falhou"
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 1 if out["outras_mudancas"] else 0

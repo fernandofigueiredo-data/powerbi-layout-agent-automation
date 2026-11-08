@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Motor de layout: calcula a nova disposição das páginas a partir do inventário.
 
-Uso:
-  python propor_layout.py layout_antes.json --saida layout_proposto.json
+Uso (com uv, que funciona igual em macOS, Linux e Windows):
+  uv run --no-project --quiet propor_layout.py layout_antes.json --saida layout_proposto.json
          [--margin M --gutter G --base U --columns 12]
 
 Entrada: o inventário (references/pbix-mcp-operacoes.md), com `role` de cada
@@ -44,15 +44,28 @@ class Pagina:
         self.p = p
         self.g = g
         self.nome = p.get("name", "?")
-        self.dec = decisoes
-        self.lim = limitacoes
+        self.decisoes = decisoes
+        self.limitacoes = limitacoes
         self.geo = {}  # chave da unidade -> (x, y, w, h)
+        self.x_coluna = None  # x da coluna de filtros, quando a página tem uma
 
-    def d(self, msg):
-        self.dec.append(f"[{self.nome}] {msg}")
+    def dec(self, msg):
+        """Registra uma decisão de layout (vai para o relatório final)."""
+        self.decisoes.append(f"[{self.nome}] {msg}")
 
-    def l(self, msg):
-        self.lim.append(f"[{self.nome}] {msg}")
+    def lim(self, msg):
+        """Registra uma limitação (vai para as recomendações fora do escopo)."""
+        self.limitacoes.append(f"[{self.nome}] {msg}")
+
+
+def rotulo_visual(v):
+    """Rótulo legível de um visual nas mensagens: título (ou tipo) e o início do id."""
+    titulo = v.get("title")
+    curto = str(v.get("id", "?"))[:8]
+    if titulo:
+        titulo = titulo if len(titulo) <= 40 else titulo[:37] + "..."
+        return f"\"{titulo}\" ({v.get('type', '?')}, {curto})"
+    return f"{v.get('type', '?')} {curto}"
 
 
 def unidades(p):
@@ -115,7 +128,7 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
 
     for u in us:
         if u["role"] not in TOPO | MEIO | BASE | {"filtro", "nota", "navegacao"}:
-            pg.d(f"{u['rep']['id']} tem função '{u['role']}' desconhecida; tratado como secundário.")
+            pg.dec(f"{rotulo_visual(u['rep'])} tem função '{u['role']}' desconhecida; tratado como secundário.")
             u["role"] = "secundario"
 
     header = [u for u in us if u["role"] == "identidade" and u["rep"].get("full_bleed")]
@@ -134,7 +147,7 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
     f_lista = [u for u in basicos if not cabe_na_faixa(u)]
     f_susp = [u for u in filtros if u not in f_lista]
     if len(f_lista) < len(basicos):
-        pg.d(f"{len(basicos) - len(f_lista)} segmentador(es) em lista vertical cabem na altura da faixa "
+        pg.dec(f"{len(basicos) - len(f_lista)} segmentador(es) em lista vertical cabem na altura da faixa "
              "superior e ficam nela, ao lado dos KPIs.")
     meio = [u for u in us if u["role"] in MEIO]
     base_ = [u for u in us if u["role"] in BASE]
@@ -148,7 +161,7 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
         kpis.remove(principal)
         kpis.insert(0, principal)
     elif kpis and not any(u["principal"] for u in us):
-        pg.d(f"sem visual principal declarado; o KPI {kpis[0]['rep']['id']} (primeiro na ordem de leitura) assume.")
+        pg.dec(f"sem visual principal declarado; o KPI {rotulo_visual(kpis[0]['rep'])} (primeiro na ordem de leitura) assume.")
 
     y0 = m
     # Faixa de título de borda a borda.
@@ -159,7 +172,7 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
             pg.geo[u["chave"]] = (0, h_head, W, h)
             h_head += h
         y0 = h_head + gt
-        pg.d("faixa de título de borda a borda mantida como cabeçalho; o conteúdo começa abaixo dela.")
+        pg.dec("faixa de título de borda a borda mantida como cabeçalho; o conteúdo começa abaixo dela.")
 
     # Título largo dentro das margens: vira faixa de cabeçalho com a largura do grid.
     # Identidades pequenas da mesma faixa (data, subtítulo, logo) ficam à direita dele.
@@ -182,130 +195,167 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
             c += sp
         y0 += h_cab + gt
         ident = [u for u in ident if u not in faixa]
-        pg.d("título largo virou faixa de cabeçalho dentro das margens; o KPI principal abre a faixa "
+        pg.dec("título largo virou faixa de cabeçalho dentro das margens; o KPI principal abre a faixa "
              "superior logo abaixo dele.")
 
     y_fim = H - m
     # Linha de navegação: mesma posição em todas as páginas do mesmo tamanho.
-    if nav:
+    if nav and len(nav) > C:
+        pg.lim(f"{len(nav)} botões de navegação não cabem numa linha de {C} colunas; posições originais "
+               "mantidas, ajuste à mão.")
+    elif nav:
         h_nav = 5 * b
         y_nav = y_fim - h_nav
-        largura_bt = min(2, C // max(1, len(nav)))
+        largura_bt = max(1, min(2, C // len(nav)))
         col = C - largura_bt * len(nav)
-        for u in sorted(nav, key=lambda u: (u["rep"].get("title") or "", u["rep"]["id"])):
+        # Na ordem em que o autor dispôs os botões (leitura), não em ordem alfabética.
+        for u in ordem_leitura(nav):
             pg.geo[u["chave"]] = (x_inicio(g, col), y_nav, largura_vao(g, largura_bt), h_nav)
             col += largura_bt
         y_fim = y_nav - gt
-        pg.d("navegação numa linha fixa no rodapé, à direita, igual em todas as páginas deste tamanho.")
+        pg.dec("navegação numa linha fixa no rodapé, à direita, igual em todas as páginas deste tamanho.")
 
-    # Coluna de filtros para segmentadores em lista vertical.
-    Cm = C
-    notas_coluna = []
-    if f_lista:
-        fc = 2 if C >= 10 else 1
-        Cm = C - fc
-        xc, wc = x_inicio(g, Cm), largura_vao(g, fc)
-        if notas:
-            notas_coluna, notas = notas, []
-        # Com coluna de filtros, os demais segmentadores abrem a coluna, no alto, quando não há
-        # KPI na página ou quando não cabem na linha dos KPIs com 2 colunas cada.
+    # Coluna de filtros (listas verticais que não cabem na faixa superior) e faixa superior.
+    # A faixa decide primeiro quantas colunas usa: se os KPIs só cabem com 2 colunas cada
+    # usando a largura toda, ela ocupa as 12 colunas e a coluna de filtros começa abaixo dela.
+    ni, nk = len(ident), len(kpis)
+    tem_coluna = bool(f_lista)
+    fc = (2 if C >= 10 else 1) if tem_coluna else 0
+    Cm = C - fc
+    coluna_abaixo = tem_coluna and nk > 0 and 2 * (ni + nk) > Cm and 2 * (ni + nk) <= C
+    topo_C = C if coluna_abaixo else Cm
+    susp_coluna, notas_coluna = [], []
+    if tem_coluna:
         # Filtros cujo campo foi para a coluna em outra página vão para a coluna aqui também.
         forcados = [u for u in f_susp if u["rep"].get("field") in forcar_coluna]
         livres = [u for u in f_susp if u not in forcados]
-        cabem_no_topo = 2 * (len(ident) + len(kpis) + len(livres)) <= Cm
-        if kpis and cabem_no_topo:
+        if nk and 2 * (ni + nk + len(livres)) <= topo_C:
             susp_coluna, f_susp = forcados, livres
         else:
-            susp_coluna, f_susp = f_susp, []
+            susp_coluna, f_susp = forcados + livres, []
         susp_coluna = sorted(susp_coluna, key=lambda u: (u["y"], u["x"]))
         if forcados:
-            pg.d(f"{len(forcados)} filtro(s) na coluna para repetir a posição que têm nas outras páginas.")
-        alt_notas = [max(4 * b, min(encaixar(u["rep"]["height"], b, "ceil"), 12 * b)) for u in notas_coluna]
-        reserva = sum(alt_notas) + gt * len(alt_notas)
-        disponivel = y_fim - y0 - reserva - gt * (len(f_lista) - 1)
-        pesos = [max(1, int(u["rep"].get("items") or 1)) + 3 for u in f_lista]
-        y = y0
-        for u in susp_coluna:
-            h = max(7 * b, min(encaixar(u["rep"]["height"], b), 10 * b))
-            pg.geo[u["chave"]] = (xc, y, wc, h)
-            y += h + gt
-        unid = distribuir(pesos, max(len(f_lista), int((disponivel - (y - y0)) // b)),
-                          minimo=min(8, int((disponivel - (y - y0)) // b) // len(f_lista)))
-        for u, n in zip(f_lista, unid):
-            pg.geo[u["chave"]] = (xc, y, wc, n * b)
-            y += n * b + gt
-        y = y_fim
-        for u, h in reversed(list(zip(notas_coluna, alt_notas))):
-            y -= h
-            pg.geo[u["chave"]] = (xc, y, wc, h)
-            y -= gt
-        pg.d(f"{len(f_lista)} segmentador(es) em lista vertical na coluna de filtros à direita ({fc} colunas). "
-             "Alternativa fora do escopo: trocar para lista suspensa e levar para a faixa superior.")
-        if notas_coluna:
-            pg.d("nota(s) fecham a coluna de filtros.")
-        if susp_coluna:
-            pg.d(f"{len(susp_coluna)} segmentador(es) em lista suspensa no alto da coluna de filtros.")
+            pg.dec(f"{len(forcados)} filtro(s) na coluna para repetir a posição que têm nas outras páginas.")
+        if notas:
+            notas_coluna, notas = notas, []
+        if coluna_abaixo:
+            pg.dec(f"a faixa de KPIs usa as {C} colunas para que os {nk} KPIs tenham 2 colunas cada; "
+                   "a coluna de filtros começa logo abaixo dela.")
 
-    # Faixa superior.
     y = y0
     topo = ordem_leitura(ident) + kpis
     linha_susp = []
+    # Identidades compactas têm 2 colunas; se forem muitas, encolhem para deixar lugar aos KPIs.
+    id_span = 2
+    if nk and ni and id_span * ni > topo_C - 2:
+        id_span = max(1, (topo_C - 2) // ni)
+    if nk and ni * id_span + 1 > topo_C:
+        pg.lim(f"{ni} identidades e {nk} KPIs não cabem na faixa superior; posições originais mantidas, "
+               "ajuste à mão.")
+        topo, f_susp, ident, kpis = [], [], [], []
     if topo or f_susp:
-        ni, nk, nf = len(ident), len(kpis), len(f_susp)
-        resto = Cm - 2 * ni - 2 * nf
+        nf = len(f_susp)
+        resto = topo_C - id_span * ni - 2 * nf
         if nk and resto < 2 * nk:
-            linha_susp, f_susp_linha = f_susp, []
-            resto = Cm - 2 * ni
+            linha_susp, f_linha = f_susp, []
+            resto = topo_C - id_span * ni
             if f_susp:
-                pg.d("segmentadores em lista suspensa numa segunda linha estreita da faixa superior.")
+                pg.dec("segmentadores em lista suspensa numa segunda linha estreita da faixa superior.")
         else:
-            f_susp_linha = f_susp
-        itens = topo + f_susp_linha
-        spans = [2] * ni
-        if nk:
-            k = max(1, resto // nk)
-            # Com filtros ou identidade na linha, um KPI não passa de um terço da largura.
-            teto = max(2, Cm // 3)
-            if k > teto and (f_susp_linha or ni):
-                k = teto
-            if resto < 2 * nk:
-                pg.l(f"{nk} KPIs não cabem com 2 colunas cada; ficaram com {k}.")
-            sobra = Cm - 2 * ni - 2 * len(f_susp_linha) - k * nk
-            spans += [k] * nk
-            # Filtros crescem no máximo até 3 colunas; o resto da sobra vai para o KPI principal.
-            por_filtro = min(1, sobra // len(f_susp_linha)) if f_susp_linha and sobra >= nk else 0
-            spans += [2 + por_filtro] * len(f_susp_linha)
-            sobra -= por_filtro * len(f_susp_linha)
-            if sobra > 0:
-                # A sobra que não se divide igualmente vai para o KPI principal, o mais importante.
-                spans[ni] += sobra
-                if nk > 1:
-                    pg.d(f"KPI principal {kpis[0]['rep']['id']} com {sobra} coluna(s) a mais que os demais, "
-                         "para fechar a faixa no grid.")
-                else:
-                    pg.d(f"KPI único {kpis[0]['rep']['id']} ocupa as colunas livres da faixa superior.")
-        elif ident:
-            spans = distribuir([2 if u in ident else 1 for u in itens], Cm, minimo=1)
-        elif itens:
-            # Só filtros no topo: largura de 2 a 3 colunas cada, alinhados à esquerda.
-            spans = [max(1, min(3, Cm // len(itens)))] * len(itens)
+            f_linha = f_susp
         if nk:
             h_topo = max(h_card, min(encaixar(0.18 * util_h, b), encaixar(0.22 * util_h, b, "floor")))
         else:
             h_topo = max(encaixar(0.6 * h_card, b), encaixar(0.12 * util_h, b))
-        c = 0
-        for u, sp in zip(itens, spans):
-            pg.geo[u["chave"]] = (x_inicio(g, c), y, largura_vao(g, sp), h_topo)
-            c += sp
-        if itens:
+        if nk:
+            # KPIs que não cabem com 2 colunas cada numa linha quebram em linhas equilibradas.
+            por_linha = nk if resto >= 2 * nk else max(1, resto // 2)
+            n_linhas = -(-nk // por_linha)
+            por_linha = -(-nk // n_linhas)
+            k = max(1, resto // por_linha)
+            teto = max(2, topo_C // 3)
+            if k > teto and (f_linha or ni) and n_linhas == 1:
+                k = teto
+            if n_linhas > 1:
+                h_topo = h_card
+                pg.lim(f"{nk} KPIs em {n_linhas} linhas de até {por_linha}, porque não cabem numa linha "
+                       "com 2 colunas cada.")
+            primeira = kpis[:por_linha]
+            spans = [id_span] * ni + [k] * len(primeira)
+            sobra = topo_C - id_span * ni - 2 * len(f_linha) - k * len(primeira)
+            # Filtros crescem no máximo até 3 colunas; o resto da sobra vai para o KPI principal.
+            por_filtro = min(1, sobra // len(f_linha)) if f_linha and sobra >= len(primeira) else 0
+            spans += [2 + por_filtro] * len(f_linha)
+            sobra -= por_filtro * len(f_linha)
+            if sobra > 0:
+                spans[ni] += sobra
+                if nk > 1:
+                    pg.dec(f"KPI principal {rotulo_visual(kpis[0]['rep'])} com {sobra} coluna(s) a mais que os demais, "
+                           "para fechar a faixa no grid.")
+                else:
+                    pg.dec(f"KPI único {rotulo_visual(kpis[0]['rep'])} ocupa as colunas livres da faixa superior.")
+            itens = ordem_leitura(ident) + primeira + f_linha
+            c = 0
+            for u, sp in zip(itens, spans):
+                pg.geo[u["chave"]] = (x_inicio(g, c), y, largura_vao(g, sp), h_topo)
+                c += sp
             y += h_topo + gt
+            for j in range(1, n_linhas):
+                c = id_span * ni
+                for u in kpis[j * por_linha:(j + 1) * por_linha]:
+                    pg.geo[u["chave"]] = (x_inicio(g, c), y, largura_vao(g, k), h_topo)
+                    c += k
+                y += h_topo + gt
+        else:
+            itens = ordem_leitura(ident) + f_linha
+            if ident:
+                spans = distribuir([2 if u in ident else 1 for u in itens], topo_C, minimo=1)
+            else:
+                # Só filtros no topo: largura de 2 a 3 colunas cada, alinhados à esquerda.
+                spans = [max(1, min(3, topo_C // len(itens)))] * len(itens)
+            c = 0
+            for u, sp in zip(itens, spans):
+                pg.geo[u["chave"]] = (x_inicio(g, c), y, largura_vao(g, sp), h_topo)
+                c += sp
+            if itens:
+                y += h_topo + gt
         if linha_susp:
             h_f = 7 * b
-            sp = max(1, min(3, Cm // len(linha_susp)))
+            sp = max(1, min(3, topo_C // len(linha_susp)))
             for i, u in enumerate(sorted(linha_susp, key=lambda u: u["x"])):
                 pg.geo[u["chave"]] = (x_inicio(g, i * sp), y, largura_vao(g, sp), h_f)
             y += h_f + gt
     y_meio0 = y
+
+    if tem_coluna:
+        xc, wc = x_inicio(g, Cm), largura_vao(g, fc)
+        pg.x_coluna = xc
+        y_col0 = y_meio0 if coluna_abaixo else y0
+        alt_notas = [max(4 * b, min(encaixar(u["rep"]["height"], b, "ceil"), 12 * b)) for u in notas_coluna]
+        reserva = sum(alt_notas) + gt * len(alt_notas)
+        disponivel = y_fim - y_col0 - reserva - gt * (len(f_lista) - 1)
+        pesos = [max(1, int(u["rep"].get("items") or 1)) + 3 for u in f_lista]
+        yc = y_col0
+        for u in susp_coluna:
+            h = max(7 * b, min(encaixar(u["rep"]["height"], b), 10 * b))
+            pg.geo[u["chave"]] = (xc, yc, wc, h)
+            yc += h + gt
+        livre_u = int((disponivel - (yc - y_col0)) // b)
+        unid = distribuir(pesos, max(len(f_lista), livre_u), minimo=min(8, livre_u // len(f_lista)))
+        for u, n in zip(f_lista, unid):
+            pg.geo[u["chave"]] = (xc, yc, wc, n * b)
+            yc += n * b + gt
+        yc = y_fim
+        for u, h in reversed(list(zip(notas_coluna, alt_notas))):
+            yc -= h
+            pg.geo[u["chave"]] = (xc, yc, wc, h)
+            yc -= gt
+        pg.dec(f"{len(f_lista)} segmentador(es) em lista vertical na coluna de filtros à direita ({fc} colunas). "
+               "Alternativa fora do escopo: trocar para lista suspensa e levar para a faixa superior.")
+        if notas_coluna:
+            pg.dec("nota(s) fecham a coluna de filtros.")
+        if susp_coluna:
+            pg.dec(f"{len(susp_coluna)} segmentador(es) em lista suspensa no alto da coluna de filtros.")
 
     # Notas sem coluna de filtros: linha estreita no fim da área principal.
     y_fim_main = y_fim
@@ -350,23 +400,31 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
                     pesos = [2 if u["role"] == "detalhe" else 1 for u in itens]
                 colocar_linha(pg, itens, y_meio0, h, 0, Cm, pesos)
                 if h < h_graf:
-                    pg.l(f"linha do {nome} com {h} px de altura, abaixo do mínimo de legibilidade ({h_graf:.0f} px).")
+                    pg.lim(f"linha do {nome} com {h} px de altura, abaixo do mínimo de legibilidade ({h_graf:.0f} px).")
                 y_meio0 += h + gt
         if lin_meio and len(lin_meio[0]) == 2 and pesos_meio(lin_meio[0]) == [2, 1]:
-            pg.d(f"no meio, {lin_meio[0][0]['rep']['id']} fica à esquerda com 2/3 da largura por ser o mais importante.")
+            pg.dec(f"no meio, {rotulo_visual(lin_meio[0][0]['rep'])} fica à esquerda com 2/3 da largura por ser o mais importante.")
     if not topo and not f_susp:
-        pg.d("página sem faixa superior; o meio sobe para o topo.")
+        pg.dec("página sem faixa superior; o meio sobe para o topo.")
     if not meio and base_:
-        pg.d("página sem tendência ou comparação; a base sobe e ocupa o meio.")
+        pg.dec("página sem tendência ou comparação; a base sobe e ocupa o meio.")
+    # Tabelas e matrizes: pelo menos 90 px (em 1280) por campo exibido.
+    for u in base_:
+        n_campos = len(u["rep"].get("fields") or [])
+        geo = pg.geo.get(u["chave"])
+        if u["role"] == "detalhe" and n_campos and geo and geo[2] < 90 * s * n_campos:
+            pg.lim(f"{rotulo_visual(u['rep'])} com {geo[2]} px para {n_campos} campos, abaixo de "
+                   f"{90 * s:.0f} px por campo; colunas podem ficar cortadas.")
     densidade = len(us)
     if densidade > 8:
-        pg.l(f"{densidade} vagas na página, acima da referência de 6 a 8 por página (observação, não alterado).")
+        pg.lim(f"{densidade} vagas na página, acima da referência de 6 a 8 por página (observação, não alterado).")
 
 
 def layout_auxiliar(pg, us):
     """Dica de ferramenta e detalhamento: só margem e unidade-base."""
     g = pg.g
     W, H, b, m = g["largura"], g["altura"], g["base"], g["margem"]
+    ml = g["margem_esquerda"]
     if not us:
         return
     x0 = min(u["rep"]["x"] for u in us)
@@ -374,18 +432,18 @@ def layout_auxiliar(pg, us):
     x1 = max(u["rep"]["x"] + u["rep"]["width"] for u in us)
     y1 = max(u["rep"]["y"] + u["rep"]["height"] for u in us)
     md = g["margem_direita"]
-    ex = min(1.0, (W - m - md) / max(1, x1 - x0))
+    ex = min(1.0, (W - ml - md) / max(1, x1 - x0))
     ey = min(1.0, (H - 2 * m) / max(1, y1 - y0))
     for u in us:
         r = u["rep"]
-        ax0 = m + (r["x"] - x0) * ex
+        ax0 = ml + (r["x"] - x0) * ex
         ay0 = m + (r["y"] - y0) * ey
         ax1 = ax0 + r["width"] * ex
         ay1 = ay0 + r["height"] * ey
         nx0, ny0 = encaixar(ax0, b), encaixar(ay0, b)
         nx1 = min(encaixar(ax1, b, "floor"), W - md)
         ny1 = min(encaixar(ay1, b), H - m)
-        pg.geo[u["chave"]] = [max(m, nx0), max(m, ny0), max(b, nx1 - max(m, nx0)), max(b, ny1 - max(m, ny0))]
+        pg.geo[u["chave"]] = [max(ml, nx0), max(m, ny0), max(b, nx1 - max(ml, nx0)), max(b, ny1 - max(m, ny0))]
     # Garante a calha entre vizinhos: encolhe o visual de cima (ou da esquerda).
     gt = g["calha"]
     caixas = [pg.geo[u["chave"]] for u in us]
@@ -401,7 +459,7 @@ def layout_auxiliar(pg, us):
                 a[2] = max(b, c[0] - gt - a[0])
     for u in us:
         pg.geo[u["chave"]] = tuple(pg.geo[u["chave"]])
-    pg.d(f"página do tipo '{pg.p.get('type')}': só encaixe na margem e na unidade-base, sem faixas.")
+    pg.dec(f"página do tipo '{pg.p.get('type')}': só encaixe na margem e na unidade-base, sem faixas.")
 
 
 def contem(caixa, v):
@@ -432,13 +490,16 @@ def aplicar(pg, us):
         v["width"] = round(o_v["width"] * fx)
         v["height"] = round(o_v["height"] * fy)
         v["rel_x"], v["rel_y"] = v["x"] - pai["x"], v["y"] - pai["y"]
+        # Grupo só movido (mesmo tamanho): o filho mantém a geometria relativa e basta mover o
+        # container. Grupo redimensionado: o filho precisa receber rel_x, rel_y, width e height.
+        v["aplicar_filho"] = (abs(fx - 1) > 1e-9 or abs(fy - 1) > 1e-9)
     # Formas de fundo envolvem o bloco que já envolviam, com folga de uma unidade-base.
     b = g["base"]
     for c in (v for v in p["visuals"] if v.get("role") == "container" and not v.get("parent")):
         dentro = [v for v in p["visuals"] if v is not c and v.get("role") != "container"
                   and not v.get("parent") and contem(original[c["id"]], original[v["id"]])]
         if not dentro:
-            pg.d(f"forma de fundo {c['id']} não envolve nenhum visual; geometria mantida.")
+            pg.dec(f"forma de fundo {rotulo_visual(c)} não envolve nenhum visual; geometria mantida.")
             continue
         x0 = min(v["x"] for v in dentro) - b
         y0 = min(v["y"] for v in dentro) - b
@@ -479,10 +540,10 @@ def alinhar_filtros_entre_paginas(paginas):
             outros = [pg.geo[o["chave"]] for o in us if o is not u and o["chave"] in pg.geo
                       and o["role"] != "container"]
             if any(sobrepoe(alvo, o) for o in outros):
-                pg.d(f"filtro de {campo} não pôde repetir a posição usada em '{origem}' sem sobrepor outro visual.")
+                pg.dec(f"filtro de {campo} não pôde repetir a posição usada em '{origem}' sem sobrepor outro visual.")
             else:
                 pg.geo[u["chave"]] = alvo
-                pg.d(f"filtro de {campo} na mesma posição e tamanho que em '{origem}'.")
+                pg.dec(f"filtro de {campo} na mesma posição e tamanho que em '{origem}'.")
 
 
 def grid_da_pagina(p, args):
@@ -510,7 +571,9 @@ def campos_na_coluna(paginas):
     for pg, us in paginas:
         if pg.p.get("type", "normal") != "normal":
             continue
-        x_coluna = x_inicio(pg.g, pg.g["colunas"] - 2)
+        x_coluna = pg.x_coluna
+        if x_coluna is None:
+            continue
         for u in us:
             geo = pg.geo.get(u["chave"])
             if u["role"] == "filtro" and u["rep"].get("field") and geo and geo[0] == x_coluna:
@@ -528,10 +591,19 @@ def propor(doc, args):
     for pg, us in paginas:
         aplicar(pg, us)
         g = pg.g
-        pg.p["grid"] = {k: g[k] for k in ("base", "margem", "margem_direita", "calha", "colunas", "largura_coluna")}
+        pg.p["grid"] = {k: g[k] for k in ("base", "margem", "margem_esquerda", "margem_direita", "calha",
+                                          "colunas", "largura_coluna")}
         if abs(g["largura_coluna_exata"] - g["largura_coluna"]) > 0.01:
-            pg.d(f"coluna arredondada para {g['largura_coluna']} px; a sobra vai para a margem direita "
-                 f"({g['margem_direita']} px).")
+            pg.dec(f"coluna arredondada para {g['largura_coluna']} px; a sobra vai para a margem direita "
+                   f"({g['margem_direita']} px).")
+        elif g["automatico"] and (g["margem_esquerda"] != g["margem"] or g["margem_direita"] != g["margem"]):
+            pg.dec(f"colunas de {g['largura_coluna']} px, múltiplas da unidade de {g['base']} px; a sobra da "
+                   f"largura vai para as margens laterais ({g['margem_esquerda']} px à esquerda e "
+                   f"{g['margem_direita']} px à direita).")
+        # As marcas de sugestão do inventário não seguem para a proposta: ela registra decisões.
+        for v in pg.p["visuals"]:
+            for marca in ("role_sugerido", "principal_sugerido", "stack_sugerido"):
+                v.pop(marca, None)
     out["decisoes"] = decisoes
     out["limitacoes"] = limitacoes
     return out
@@ -551,6 +623,7 @@ def main():
     out = propor(doc, args)
     texto = json.dumps(out, ensure_ascii=False, indent=2)
     if args.saida:
+        os.makedirs(os.path.dirname(os.path.abspath(args.saida)), exist_ok=True)
         with open(args.saida, "w", encoding="utf-8") as f:
             f.write(texto)
         n = sum(1 for p in out["pages"] for v in p["visuals"] if "de" in v)

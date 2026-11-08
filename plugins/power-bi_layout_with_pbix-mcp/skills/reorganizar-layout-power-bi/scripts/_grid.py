@@ -1,10 +1,16 @@
 """Cálculo do grid e distribuição de colunas, compartilhado pelos scripts da skill.
 
-Grid padrão: unidade-base proporcional à largura da página (8 px em 1280, 12 px
-em 1920), margem de 3 unidades, calha de 2 unidades e 12 colunas. Com esses
-valores, 1280×720 e 1920×1080 dão colunas inteiras (88 e 132 px). Em outros
-tamanhos, a sobra da divisão em colunas vai para a margem direita, para que
-toda coluna comece num pixel inteiro.
+Grid padrão de uma página: unidade-base proporcional à largura (8 px em 1280,
+12 px em 1920, 4 px numa dica de 320), calha de 2 unidades, margem de cima e de
+baixo de 3 unidades e 12 colunas. A largura da coluna é sempre um múltiplo da
+unidade, para que toda borda de visual caia na unidade-base; a sobra da divisão
+vai para as margens laterais, dividida entre esquerda e direita em unidades
+inteiras (com pelo menos 3 unidades de cada lado). Em 1280×720 e 1920×1080 não
+há sobra: margens de 24 e 36 px e colunas de 88 e 132 px. Em 1024×768 (4:3), as
+colunas têm 64 px e as margens laterais 40 px.
+
+Com margem ou calha informadas, valem os valores dados: a coluna é a maior
+largura inteira que cabe, e a sobra vai para a margem direita.
 """
 
 import math
@@ -20,30 +26,48 @@ def unidade_padrao(largura):
 def grid_padrao(largura, altura, colunas=COLUNAS_PADRAO, margem=None, calha=None, base=None):
     """Devolve o grid de uma página como dicionário.
 
-    Campos: largura, altura, base, margem, margem_direita, calha, colunas,
-    largura_coluna, x_colunas (borda esquerda de cada coluna), area_util.
+    Campos: largura, altura, base, margem (de cima e de baixo), margem_esquerda,
+    margem_direita, calha, colunas, largura_coluna, largura_coluna_exata,
+    x_colunas (borda esquerda de cada coluna), area_util e automatico.
     Parâmetros omitidos usam o padrão proporcional ao tamanho da página.
     """
     base = base or unidade_padrao(largura)
-    margem = 3 * base if margem is None else margem
-    calha = 2 * base if calha is None else calha
-    util = largura - 2 * margem
-    col_exata = (util - (colunas - 1) * calha) / colunas
-    col = math.floor(col_exata) if col_exata > 0 else col_exata
-    sobra = util - (colunas * col + (colunas - 1) * calha)
-    x_colunas = [margem + i * (col + calha) for i in range(colunas)]
+    automatico = margem is None and calha is None
+    if automatico:
+        calha = 2 * base
+        margem = 3 * base
+        unidades = int(largura // base)
+        resto_px = largura - unidades * base
+        livre = unidades - (colunas - 1) * 2          # colunas + margens, em unidades
+        c = max(1, (livre - 6) // colunas)             # pelo menos 3 unidades por margem
+        sobra = livre - c * colunas
+        m_esq = (sobra // 2) * base
+        m_dir = (sobra - sobra // 2) * base + resto_px
+        col = c * base
+        col_exata = col
+    else:
+        margem = 3 * base if margem is None else margem
+        calha = 2 * base if calha is None else calha
+        util = largura - 2 * margem
+        col_exata = (util - (colunas - 1) * calha) / colunas
+        col = math.floor(col_exata) if col_exata > 0 else col_exata
+        m_esq = margem
+        m_dir = margem + util - (colunas * col + (colunas - 1) * calha)
+    x_colunas = [m_esq + i * (col + calha) for i in range(colunas)]
     return {
         "largura": largura,
         "altura": altura,
         "base": base,
         "margem": margem,
-        "margem_direita": margem + sobra,
+        "margem_esquerda": m_esq,
+        "margem_direita": m_dir,
         "calha": calha,
         "colunas": colunas,
         "largura_coluna": col,
         "largura_coluna_exata": round(col_exata, 2),
         "x_colunas": x_colunas,
-        "area_util": [util, altura - 2 * margem],
+        "area_util": [largura - m_esq - m_dir, altura - 2 * margem],
+        "automatico": automatico,
     }
 
 

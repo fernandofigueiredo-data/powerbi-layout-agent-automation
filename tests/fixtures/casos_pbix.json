@@ -1,0 +1,382 @@
+{
+  "arquivo": "casos_base.pbix",
+  "formato": "legado",
+  "pages": [
+    {
+      "name": "Page 1",
+      "internal_name": "ReportSection1",
+      "type": "normal",
+      "hidden": false,
+      "width": 1280,
+      "height": 720,
+      "visuals": [
+        {
+          "id": "f0a2a3307dbd4ef0",
+          "type": "textbox",
+          "x": 20.0,
+          "y": 10.0,
+          "width": 900.0,
+          "height": 64.0,
+          "z": 0,
+          "role": "identidade",
+          "role_sugerido": true
+        },
+        {
+          "id": "6eaaf51045464190",
+          "type": "textbox",
+          "x": 1000.0,
+          "y": 12.0,
+          "width": 260.0,
+          "height": 50.0,
+          "z": 1000,
+          "role": "identidade",
+          "role_sugerido": true
+        },
+        {
+          "id": "05039fb9216b429c",
+          "type": "card",
+          "x": 20.0,
+          "y": 90.0,
+          "width": 180.0,
+          "height": 100.0,
+          "z": 2000,
+          "title": "Faturamento",
+          "role": "kpi",
+          "role_sugerido": true,
+          "principal": true,
+          "principal_sugerido": true
+        },
+        {
+          "id": "50e13251f3af4155",
+          "type": "card",
+          "x": 210.0,
+          "y": 95.0,
+          "width": 170.0,
+          "height": 90.0,
+          "z": 3000,
+          "role": "kpi",
+          "role_sugerido": true
+        },
+        {
+          "id": "c96ba4d8722641c9",
+          "type": "card",
+          "x": 395.0,
+          "y": 90.0,
+          "width": 180.0,
+          "height": 100.0,
+          "z": 4000,
+          "role": "kpi",
+          "role_sugerido": true
+        },
+        {
+          "id": "9bc9972ec8ee4802",
+          "type": "card",
+          "x": 590.0,
+          "y": 92.0,
+          "width": 175.0,
+          "height": 98.0,
+          "z": 5000,
+          "role": "kpi",
+          "role_sugerido": true
+        },
+        {
+          "id": "b6b69dd1753a4a2e",
+          "type": "card",
+          "x": 780.0,
+          "y": 90.0,
+          "width": 180.0,
+          "height": 100.0,
+          "z": 6000,
+          "role": "kpi",
+          "role_sugerido": true
+        },
+        {
+          "id": "9868279f24454b32",
+          "type": "card",
+          "x": 970.0,
+          "y": 88.0,
+          "width": 170.0,
+          "height": 104.0,
+          "z": 7000,
+          "role": "kpi",
+          "role_sugerido": true
+        },
+        {
+          "id": "55700ce102f64e77",
+          "type": "slicer",
+          "x": 1150.0,
+          "y": 90.0,
+          "width": 120.0,
+          "height": 60.0,
+          "z": 8000,
+          "fields": [
+            "Vendas.Regiao"
+          ],
+          "slicer_mode": "Dropdown",
+          "field": "Vendas.Regiao",
+          "role": "filtro",
+          "role_sugerido": true
+        },
+        {
+          "id": "a2f821a776e44ef7",
+          "type": "slicer",
+          "x": 1150.0,
+          "y": 200.0,
+          "width": 120.0,
+          "height": 400.0,
+          "z": 9000,
+          "fields": [
+            "Vendas.Mes"
+          ],
+          "slicer_mode": "Basic",
+          "field": "Vendas.Mes",
+          "role": "filtro",
+          "role_sugerido": true
+        },
+        {
+          "id": "e2f6c6328a714c86",
+          "type": "lineChart",
+          "x": 20.0,
+          "y": 210.0,
+          "width": 700.0,
+          "height": 260.0,
+          "z": 10000,
+          "role": "tendencia",
+          "role_sugerido": true,
+          "stack": "empilhado-1",
+          "stack_sugerido": true
+        },
+        {
+          "id": "a7a7089c6a894f76",
+          "type": "areaChart",
+          "x": 20.0,
+          "y": 210.0,
+          "width": 700.0,
+          "height": 260.0,
+          "z": 11000,
+          "role": "tendencia",
+          "role_sugerido": true,
+          "stack": "empilhado-1",
+          "stack_sugerido": true
+        },
+        {
+          "id": "c53f4b0b66b14995",
+          "type": "shape",
+          "x": 730.0,
+          "y": 205.0,
+          "width": 420.0,
+          "height": 270.0,
+          "z": 12000,
+          "role": "container",
+          "role_sugerido": true
+        },
+        {
+          "id": "97c4c4ac0e864526",
+          "type": "group",
+          "x": 740.0,
+          "y": 215.0,
+          "width": 400.0,
+          "height": 250.0,
+          "z": 13000,
+          "is_group": true,
+          "title": "Grupo de pizzas",
+          "role": "secundario",
+          "role_sugerido": true
+        },
+        {
+          "id": "0918fb209b474785",
+          "type": "pieChart",
+          "x": 740.0,
+          "y": 215.0,
+          "width": 200.0,
+          "height": 250.0,
+          "z": 14000,
+          "parent": "97c4c4ac0e864526",
+          "rel_x": 0.0,
+          "rel_y": 0.0,
+          "role": "secundario",
+          "role_sugerido": true
+        },
+        {
+          "id": "df9ffd693df445f4",
+          "type": "donutChart",
+          "x": 940.0,
+          "y": 215.0,
+          "width": 200.0,
+          "height": 250.0,
+          "z": 15000,
+          "parent": "97c4c4ac0e864526",
+          "rel_x": 200.0,
+          "rel_y": 0.0,
+          "role": "secundario",
+          "role_sugerido": true
+        },
+        {
+          "id": "926c72c055fc4f3b",
+          "type": "tableEx",
+          "x": 20.0,
+          "y": 490.0,
+          "width": 900.0,
+          "height": 200.0,
+          "z": 16000,
+          "role": "detalhe",
+          "role_sugerido": true
+        },
+        {
+          "id": "baed4390f2db417c",
+          "type": "actionButton",
+          "x": 930.0,
+          "y": 640.0,
+          "width": 100.0,
+          "height": 40.0,
+          "z": 17000,
+          "title": "Início",
+          "role": "navegacao",
+          "role_sugerido": true
+        },
+        {
+          "id": "beea2b4e61dc4726",
+          "type": "actionButton",
+          "x": 1040.0,
+          "y": 640.0,
+          "width": 100.0,
+          "height": 40.0,
+          "z": 18000,
+          "title": "Detalhe",
+          "role": "navegacao",
+          "role_sugerido": true
+        }
+      ]
+    },
+    {
+      "name": "Detalhe",
+      "internal_name": "cc826ab16a72476fa2bb928508acc3ff",
+      "type": "normal",
+      "hidden": false,
+      "width": 1024,
+      "height": 768,
+      "visuals": [
+        {
+          "id": "372dcd7e1c3749ad",
+          "type": "textbox",
+          "x": 10.0,
+          "y": 10.0,
+          "width": 600.0,
+          "height": 50.0,
+          "z": 0,
+          "role": "identidade",
+          "role_sugerido": true
+        },
+        {
+          "id": "413b66da63a94a21",
+          "type": "card",
+          "x": 10.0,
+          "y": 70.0,
+          "width": 200.0,
+          "height": 100.0,
+          "z": 1000,
+          "role": "kpi",
+          "role_sugerido": true,
+          "principal": true,
+          "principal_sugerido": true
+        },
+        {
+          "id": "2dbcdaf7f3a349a5",
+          "type": "slicer",
+          "x": 230.0,
+          "y": 70.0,
+          "width": 150.0,
+          "height": 60.0,
+          "z": 2000,
+          "fields": [
+            "Vendas.Regiao"
+          ],
+          "slicer_mode": "Dropdown",
+          "field": "Vendas.Regiao",
+          "role": "filtro",
+          "role_sugerido": true
+        },
+        {
+          "id": "5e22fbd2a367400b",
+          "type": "clusteredColumnChart",
+          "x": 10.0,
+          "y": 190.0,
+          "width": 600.0,
+          "height": 300.0,
+          "z": 3000,
+          "role": "comparacao",
+          "role_sugerido": true
+        },
+        {
+          "id": "c3371a5fec4b460e",
+          "type": "pivotTable",
+          "x": 620.0,
+          "y": 190.0,
+          "width": 390.0,
+          "height": 560.0,
+          "z": 4000,
+          "role": "detalhe",
+          "role_sugerido": true
+        },
+        {
+          "id": "d4fb09430b30487a",
+          "type": "actionButton",
+          "x": 10.0,
+          "y": 700.0,
+          "width": 100.0,
+          "height": 40.0,
+          "z": 5000,
+          "title": "Início",
+          "role": "navegacao",
+          "role_sugerido": true
+        },
+        {
+          "id": "757a74e18e06460b",
+          "type": "actionButton",
+          "x": 120.0,
+          "y": 700.0,
+          "width": 100.0,
+          "height": 40.0,
+          "z": 6000,
+          "title": "Detalhe",
+          "role": "navegacao",
+          "role_sugerido": true
+        }
+      ]
+    },
+    {
+      "name": "Dica",
+      "internal_name": "dbc9aa0c1e52412fa4f124f9fa04858e",
+      "type": "tooltip",
+      "hidden": false,
+      "width": 320,
+      "height": 240,
+      "visuals": [
+        {
+          "id": "e773c6697cae4fe0",
+          "type": "card",
+          "x": 5.0,
+          "y": 5.0,
+          "width": 150.0,
+          "height": 80.0,
+          "z": 0,
+          "role": "kpi",
+          "role_sugerido": true,
+          "principal": true,
+          "principal_sugerido": true
+        },
+        {
+          "id": "9a5d579cb3e745e2",
+          "type": "lineChart",
+          "x": 5.0,
+          "y": 95.0,
+          "width": 300.0,
+          "height": 140.0,
+          "z": 1000,
+          "role": "tendencia",
+          "role_sugerido": true
+        }
+      ]
+    }
+  ]
+}

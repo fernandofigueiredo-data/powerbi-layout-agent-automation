@@ -26,27 +26,29 @@ das páginas ficam intactos, e o resultado vai para uma cópia
 
 | Comando | Para quê |
 |---|---|
-| `/power-bi_layout_with_pbix-mcp:reorganizar <arquivo.pbix>` | Fluxo completo: inventário, diagnóstico, grid, motor, aplicação, cópia salva, auditoria e relatório. |
-| `/power-bi_layout_with_pbix-mcp:diagnosticar <arquivo.pbix>` | Só leitura: nota atual, problemas por página e a nota que a reorganização alcançaria. |
-| `/power-bi_layout_with_pbix-mcp:grid 1920x1080` | Grid de uma página: colunas, margens, calha, vãos de n colunas. |
-| `/power-bi_layout_with_pbix-mcp:preview` | Regenera o esquema HTML antes/depois. |
+| `/power-bi-layout-with-pbix-mcp:reorganizar <arquivo.pbix>` | Fluxo completo: inventário, diagnóstico, grid, motor, aplicação, cópia salva, auditoria e relatório. |
+| `/power-bi-layout-with-pbix-mcp:diagnosticar <arquivo.pbix>` | Só leitura: nota atual, problemas por página e a nota que a reorganização alcançaria. |
+| `/power-bi-layout-with-pbix-mcp:grid 1920x1080` | Grid de uma página: colunas, margens, calha, vãos de n colunas. |
+| `/power-bi-layout-with-pbix-mcp:preview` | Regenera o esquema HTML antes/depois. |
 
 A skill também dispara sozinha quando você pede algo como "organize o layout
 deste dashboard" ou "alinhe os gráficos do relatório".
 
 ## Instalação
 
-Pré-requisitos: [Claude Code](https://claude.com/claude-code) e
-[uv](https://docs.astral.sh/uv/). O plugin sobe o pbix-mcp com `uvx` (versão
-0.9.153) e roda os scripts e o hook com `uv run`, que funciona igual em macOS,
-Linux e Windows e baixa um Python se faltar.
+Pré-requisitos: [Claude Code](https://claude.com/claude-code) (testado na
+versão 2.1.302; o hook usa o formato `command` + `args`) e
+[uv](https://docs.astral.sh/uv/). O plugin sobe o pbix-mcp com `uvx`, que baixa
+o pacote `pbix-mcp==0.9.153` do PyPI na primeira execução, e roda os scripts e
+o hook com `uv run`, que funciona igual em macOS, Linux e Windows e baixa um
+Python se faltar.
 
 ```bash
 claude plugin marketplace add fernandofigueiredo-data/power-bi_layout_with_pbix-mcp
 ```
 
 ```bash
-claude plugin install power-bi_layout_with_pbix-mcp@power-bi_layout_with_pbix-mcp
+claude plugin install power-bi-layout-with-pbix-mcp@power-bi-layout-with-pbix-mcp
 ```
 
 Para testar a partir de uma cópia local do repositório:
@@ -60,6 +62,26 @@ plugin convivem; a skill usa um servidor só do começo ao fim. Se você tinha a
 skill `reorganizar-layout-power-bi` instalada solta, desative-a para ela não
 disparar junto com a do plugin.
 
+## Guardião (hook)
+
+O plugin registra um hook `PreToolUse` para as ferramentas do pbix-mcp. Ele
+nunca bloqueia; quando é preciso, devolve `ask` e o Claude Code pede a sua
+confirmação:
+
+- **Sempre**: antes de um `pbix_save` que sobrescreveria o .pbix aberto (sem
+  `output_path`, ou com o caminho do próprio arquivo aberto) ou com
+  `overwrite=true`.
+- **Durante uma reorganização**: enquanto existir o arquivo `.pbi-layout-ativo`
+  na raiz do projeto (`$CLAUDE_PROJECT_DIR`) ou no diretório de trabalho, antes
+  de qualquer ferramenta que mude algo além da geometria (formatação, tema,
+  filtros, dados, visuais). A skill liga o guardião no início e desliga no fim
+  (`hook_guardiao.py --ligar` e `--desligar`). Se uma reorganização for
+  interrompida, apague o arquivo `.pbi-layout-ativo` à mão.
+
+Para desligar o guardião numa sessão, defina `PBI_LAYOUT_GUARDIAO=0` antes de
+abrir o Claude Code. Como todo hook, ele é carregado no início da sessão:
+depois de atualizar o plugin, reinicie o Claude Code.
+
 ## Como funciona
 
 1. **Inventário** — `inventario_pbix.py` lê páginas e visuais e sugere funções
@@ -69,15 +91,24 @@ disparar junto com a do plugin.
 2. **Diagnóstico** — `layout_check.py check` e `score` sobre o estado atual.
 3. **Proposta** — `propor_layout.py` calcula a nova geometria; o Claude revisa e
    ajusta casos ambíguos.
-4. **Aplicação** — `pbix_move_visual` visual por visual e `pbix_save` numa cópia.
-5. **Auditoria** — o subagente `auditor-layout` roda `compare_pbix.py`,
-   `layout_check.py` e a nota sobre a cópia.
+4. **Aplicação** — `pbix_move_visual` visual por visual (grupos com os filhos em
+   coordenadas relativas) e `pbix_save` numa cópia, conferida com `pbix_doctor`.
+5. **Auditoria** — o subagente `auditor-layout` roda `compare_pbix.py`, o
+   inventário da cópia com `--herdar`, `layout_check.py` e a nota.
 6. **Relatório** — grid adotado, nota antes → depois, tabela de mudanças,
    decisões, recomendações fora do escopo e o esquema HTML.
 
-Grid padrão: 1280×720 → unidade 8, margem 24, calha 16, coluna 88 px;
-1920×1080 → 12, 36, 24, 132 px; outros tamanhos escalam e a sobra do
-arredondamento vai para a margem direita.
+Grid padrão: 12 colunas, calha de 2 unidades-base, coluna sempre múltipla da
+unidade e a sobra da largura nas margens laterais.
+
+| Página | Unidade | Margens (cima/baixo, laterais) | Calha | Coluna |
+|---|---|---|---|---|
+| 1280×720 | 8 px | 24, 24 px | 16 px | 88 px |
+| 1920×1080 | 12 px | 36, 36 px | 24 px | 132 px |
+| 1024×768 (4:3) | 8 px | 24, 40 px | 16 px | 64 px |
+| 320×240 (dica) | 4 px | 12, 20 px | 8 px | 16 px |
+
+Qualquer outro tamanho: `/power-bi-layout-with-pbix-mcp:grid LxA`.
 
 O pbix-mcp não renderiza páginas: abra a cópia no Power BI Desktop para a
 conferência visual final (rótulos cortados, quebras de título).
@@ -89,24 +120,28 @@ conferência visual final (rótulos cortados, quebras de título).
 plugins/power-bi_layout_with_pbix-mcp/
   .claude-plugin/plugin.json
   .mcp.json                              # pbix-mcp embutido (uvx, versão fixada)
-  skills/reorganizar-layout-power-bi/    # SKILL.md, references/ e scripts/
+  skills/reorganizar-layout-power-bi/    # SKILL.md, references/, examples/ e scripts/
   commands/                              # reorganizar, diagnosticar, grid, preview
   agents/auditor-layout.md
   hooks/hooks.json                       # guardião (PreToolUse)
 tests/                                   # unittest, sem dependências
+  fixtures/casos_pbix.json               # inventário real de um .pbix de casos difíceis
 ```
 
 ```bash
-python3 -m unittest discover tests -v
+uv run --no-project python -m unittest discover tests -v
 ```
 
 ```bash
 claude plugin validate plugins/power-bi_layout_with_pbix-mcp
 ```
 
-O validador avisa que o nome não é kebab-case. O Claude Code aceita; só a
-sincronização com o marketplace do Claude.ai exige kebab-case
-(`power-bi-layout-with-pbix-mcp`).
+O plugin também passa pelo `plugin-validator` e pelo `skill-reviewer` do plugin
+oficial [plugin-dev](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/plugin-dev).
+
+O identificador do plugin e do marketplace é `power-bi-layout-with-pbix-mcp`
+(kebab-case, como o manifesto exige); o repositório e a pasta mantêm o nome
+`power-bi_layout_with_pbix-mcp`.
 
 ## Fundamentos
 

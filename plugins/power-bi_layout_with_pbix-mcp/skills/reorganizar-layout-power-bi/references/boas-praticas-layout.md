@@ -1,6 +1,6 @@
 # Boas práticas de layout em relatórios Power BI
 
-Fundamentos que sustentam as regras da skill, com a fonte de cada um. Consulte quando precisar justificar uma decisão ou resolver um caso não previsto. Onde as fontes divergem, a divergência está registrada, com a escolha da skill e o motivo.
+Fundamentos que sustentam as regras da skill, com a fonte de cada um. Consultar ao justificar uma decisão ou ao resolver um caso não previsto. Onde as fontes divergem, a divergência está registrada, com a escolha da skill e o motivo.
 
 ## Índice
 
@@ -53,15 +53,15 @@ Fundamentos que sustentam as regras da skill, com a fonte de cada um. Consulte q
 
 ## 7. Acessibilidade e ordem de leitura
 
-- A ordem de tabulação deve acompanhar a ordem visual de leitura, e formas e imagens decorativas devem sair dela. [Microsoft Learn, *Design Power BI reports for accessibility*] A skill não altera a ordem de tabulação, porque ela está fora da geometria; quando a nova disposição divergir muito da ordem de tabulação existente, registre isso no relatório como recomendação.
+- A ordem de tabulação deve acompanhar a ordem visual de leitura, e formas e imagens decorativas devem sair dela. [Microsoft Learn, *Design Power BI reports for accessibility*] A skill não altera a ordem de tabulação, porque ela está fora da geometria; quando a nova disposição divergir muito da ordem de tabulação existente, registrar isso no relatório como recomendação.
 
 ## 8. Divergências entre fontes
 
 | Ponto | Posição A | Posição B | Escolha da skill |
 |---|---|---|---|
-| Canto superior esquerdo | Logotipo ou principal KPI (regra do usuário desta skill) | Manter logotipos, botões e segmentadores fora da área de visão geral (SQLBI, 3-30-300) | Identidade compacta no canto, KPI principal logo à direita, como primeiro cartão: preserva a regra do usuário e entrega a primeira leitura a um dado. |
-| Segmentadores | Faixa superior, ao lado dos KPIs (regra do usuário) | Barra lateral ou rodapé (awesome-copilot); painel lateral (SQLBI) | Faixa superior, no fim da linha, depois dos KPIs. Com muitos segmentadores em lista suspensa, segunda linha estreita ainda na faixa superior. Com segmentador em lista vertical, coluna de filtros à direita que começa na faixa superior, solução validada no teste com o painel IF.data. |
-| Tabelas | Base da tela (regra do usuário) | Embaixo à direita, como último ponto de leitura (SQLBI) | Base; à direita quando dividem a linha com outro visual, largura toda quando sozinhas. |
+| Canto superior esquerdo | Logotipo ou principal KPI (preferência do autor da skill) | Manter logotipos, botões e segmentadores fora da área de visão geral (SQLBI, 3-30-300) | Identidade compacta no canto, KPI principal logo à direita, como primeiro cartão: preserva a preferência do autor e entrega a primeira leitura a um dado. |
+| Segmentadores | Faixa superior, ao lado dos KPIs (preferência do autor da skill) | Barra lateral ou rodapé (awesome-copilot); painel lateral (SQLBI) | Faixa superior, no fim da linha, depois dos KPIs. Com muitos segmentadores em lista suspensa, segunda linha estreita ainda na faixa superior. Lista vertical que não cabe na faixa vai para uma coluna de filtros à direita, que começa na faixa superior; a solução foi validada em teste com um painel real de dois tamanhos de página. |
+| Tabelas | Base da tela (preferência do autor da skill) | Embaixo à direita, como último ponto de leitura (SQLBI) | Base; à direita quando dividem a linha com outro visual, largura toda quando sozinhas. |
 
 ## 9. Fontes
 

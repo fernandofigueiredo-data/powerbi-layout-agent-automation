@@ -1,11 +1,22 @@
 {
-  "name": "power-bi_layout_with_pbix-mcp",
+  "name": "power-bi-layout-with-pbix-mcp",
   "displayName": "Power BI Layout",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Reorganiza o layout de relatórios Power BI (.pbix) pelo pbix-mcp: grid de 12 colunas, alinhamento, margens e calhas constantes, tamanho proporcional à importância e leitura em Z — mexendo só na geometria dos visuais. Traz motor de layout determinístico, nota de layout 0–100, hook guardião, auditor independente e esquema visual antes/depois.",
   "author": {
     "name": "Fernando Figueiredo"
   },
+  "homepage": "https://github.com/fernandofigueiredo-data/power-bi_layout_with_pbix-mcp#readme",
+  "repository": "https://github.com/fernandofigueiredo-data/power-bi_layout_with_pbix-mcp",
   "license": "MIT",
-  "keywords": ["power-bi", "pbix", "layout", "grid", "dashboard", "design", "pbix-mcp", "z-pattern"]
+  "keywords": [
+    "power-bi",
+    "pbix",
+    "layout",
+    "grid",
+    "dashboard",
+    "design",
+    "pbix-mcp",
+    "z-pattern"
+  ]
 }
