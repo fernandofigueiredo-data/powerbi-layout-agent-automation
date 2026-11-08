@@ -10,6 +10,75 @@ Dados, medidas, filtros, formatação, cores, títulos, tema, bookmarks e tamanh
 das páginas ficam intactos, e o resultado vai para uma cópia
 `<nome>_reorganizado.pbix`. O original não é tocado.
 
+## O problema
+
+Um relatório Power BI cresce visual por visual: um cartão aqui, um gráfico
+arrastado ali. No fim, as bordas não se alinham, os espaçamentos variam, um
+visual encosta no outro e o KPI mais importante não está onde o olho começa a
+ler. Arrumar isso à mão no Power BI Desktop é lento e não se repete igual
+entre páginas.
+
+O plugin faz essa diagramação com regras fixas e verificáveis, mede o
+resultado com uma nota de layout e prova que nada além da posição e do tamanho
+dos visuais foi alterado.
+
+## Resultado no exemplo do repositório
+
+Página 1280×720 com 9 visuais (logotipo, 3 KPIs, segmentador, linha, barras,
+tabela e pizza), em
+[`examples/`](plugins/powerbi-layout-agent-automation/skills/reorganizar-layout-power-bi/examples/):
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Nota de layout (0–100) | 48,9 | 100 |
+| Alinhamento ao grid (25) | 0 | 25 |
+| Espaço: margem e calha (20) | 2,9 | 20 |
+| Integridade: sem sobreposição (20) | 15 | 20 |
+| Hierarquia em Z (20) | 16 | 20 |
+| Proporção (15) | 15 | 15 |
+| Erros na checagem | 1 sobreposição | 0 |
+| Avisos na checagem | 18 | 0 |
+
+Para reproduzir:
+
+```bash
+uv run --no-project plugins/powerbi-layout-agent-automation/skills/reorganizar-layout-power-bi/scripts/layout_check.py score plugins/powerbi-layout-agent-automation/skills/reorganizar-layout-power-bi/examples/layout_antes.json
+```
+
+Troque `layout_antes.json` por `layout_proposto.json` para ver a nota depois.
+O esquema visual de antes e depois está em
+[docs/exemplo_antes_depois.html](docs/exemplo_antes_depois.html) (baixe o
+arquivo e abra no navegador).
+
+## Regras de layout aplicadas
+
+Resumo do que o plugin faz em cada página. A lista completa, com exemplos e
+casos especiais, está em **[docs/regras-de-layout.md](docs/regras-de-layout.md)**.
+
+1. **Só a geometria muda.** Posição e tamanho de visuais e grupos. Dados,
+   medidas, filtros, formatação, cores, títulos, tema, bookmarks e tamanho das
+   páginas ficam como estão. Nenhum visual é criado, removido ou ocultado.
+2. **Grid de 12 colunas** com margens e calha múltiplas de uma unidade-base
+   (8 px em 1280×720, 12 px em 1920×1080). Toda borda cai numa linha do grid.
+3. **Margem e calha constantes.** Nenhum visual encosta na borda da página nem
+   em outro visual, e nenhum se sobrepõe a outro.
+4. **Leitura em Z.** Identidade, KPIs e filtros no topo; tendências e
+   comparações no meio; tabelas, matrizes e visuais secundários na base.
+5. **O KPI principal abre a página**, no canto superior esquerdo ou logo ao
+   lado do logotipo.
+6. **Mesma função, mesmo tamanho.** KPIs da mesma fileira ficam idênticos; o
+   gráfico principal do meio recebe 2/3 da largura.
+7. **Filtros consistentes.** Listas longas vão para uma coluna de filtros à
+   direita, e o mesmo filtro fica na mesma posição em todas as páginas.
+8. **Tamanho mínimo legível.** Cartões com 80 px de altura, gráficos com
+   200 px, tabelas com 90 px por coluna (em 1280×720). O que não couber é
+   registrado, não espremido.
+9. **Casos especiais preservados.** Grupos se movem juntos, visuais
+   alternados por bookmark continuam empilhados, formas de fundo acompanham o
+   bloco e a navegação fica fixa no rodapé.
+10. **O que exige mudar formatação vira recomendação**, como trocar um
+    segmentador de lista por lista suspensa. O plugin registra, não aplica.
+
 ## O que tem de diferente
 
 | Recurso | O que faz |
@@ -124,6 +193,9 @@ plugins/powerbi-layout-agent-automation/
   commands/                              # reorganizar, diagnosticar, grid, preview
   agents/auditor-layout.md
   hooks/hooks.json                       # guardião (PreToolUse)
+docs/
+  regras-de-layout.md                    # as regras aplicadas, para quem usa o plugin
+  exemplo_antes_depois.html              # esquema visual do exemplo
 tests/                                   # unittest, sem dependências
   fixtures/casos_pbix.json               # inventário real de um .pbix de casos difíceis
 ```

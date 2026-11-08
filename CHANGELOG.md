@@ -7,6 +7,10 @@
   `/powerbi-layout-agent-automation:...` e o prefixo das ferramentas do
   servidor embutido, `mcp__plugin_powerbi-layout-agent-automation_pbix-mcp__`.
 - Quem instalou a 0.2.0 precisa remover o plugin antigo e instalar de novo.
+- Novo `docs/regras-de-layout.md`, com todas as regras aplicadas a um .pbix
+  escritas para quem usa o plugin. O README ganhou o problema que o plugin
+  resolve, o resultado medido no exemplo (nota 48,9 → 100) e um resumo das
+  regras.
 
 ## 0.2.0 — 2026-11-08
 
