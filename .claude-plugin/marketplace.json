@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Plugin de reorganização de layout de relatórios Power BI com o pbix-mcp",
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "plugins": [
     {

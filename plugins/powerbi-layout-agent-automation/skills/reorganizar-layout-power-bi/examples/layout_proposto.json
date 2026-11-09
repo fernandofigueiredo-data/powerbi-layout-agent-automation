@@ -169,6 +169,9 @@
     "[Visão geral] no meio, \"Vendas por mês\" (lineChart, tend) fica à esquerda com 2/3 da largura por ser o mais importante."
   ],
   "limitacoes": [
+    "[Visão geral] \"Vendas por mês\" (lineChart, tend) encolhe de 410 para 288 px na menor dimensão; confira no Power BI Desktop rótulos, marcas de eixo e linhas visíveis.",
+    "[Visão geral] \"Por região\" (clusteredBarChart, comp) encolhe de 420 para 288 px na menor dimensão; confira no Power BI Desktop rótulos, marcas de eixo e linhas visíveis.",
+    "[Visão geral] \"Detalhe\" (tableEx, tab) encolhe de 260 para 232 px na menor dimensão; confira no Power BI Desktop rótulos, marcas de eixo e linhas visíveis.",
     "[Visão geral] 9 vagas na página, acima da referência de 6 a 8 por página (observação, não alterado)."
   ]
 }

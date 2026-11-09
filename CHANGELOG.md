@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.1 — 2026-11-09
+
+Correções vindas de um teste real no Power BI Desktop com o painel IFData
+(2 páginas de 1920×1080, 18 visuais; nota 60,6 → 100). Capturas de antes e
+depois em `docs/caso-real/` e no README.
+
+- Motor: a nota metodológica só fecha a coluna de filtros se o texto couber na
+  largura dela. Nota longa (ou sem texto e larga no original) fica numa linha
+  no fim da área principal. Antes, uma nota de ~250 caracteres ia para uma
+  caixa de 288×48.
+- Motor: quando a tabela ficaria com menos de 90 px por campo dividindo a base
+  com secundários, eles sobem para o meio (se houver vaga numa linha só) ou a
+  tabela ganha uma linha própria, desde que a largura toda baste.
+- Motor: lista vertical na coluna de filtros fica com a altura dos seus itens
+  (mais 20%), sem esticar até a base.
+- Motor: gráfico ou tabela que perde mais de 10% da menor dimensão gera uma
+  limitação para conferir no Desktop. No teste, uma rosca que perdeu 14% da
+  altura cortou o rótulo central, e a dispersão perdeu marcas do eixo.
+- README: seção "Teste real no Power BI Desktop", com o que melhorou e o que
+  piorou. Regras atualizadas em `docs/regras-de-layout.md` e na referência da
+  skill.
+- Testes: 50 (nota curta e longa, tabela apertada, lista curta, encolhimento).
+
 ## 0.3.0 — 2026-11-08
 
 - Repositório, plugin, marketplace e pasta do plugin renomeados para

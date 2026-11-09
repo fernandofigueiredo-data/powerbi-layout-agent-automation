@@ -157,8 +157,10 @@ Regras do topo:
   itens ou pela altura que o autor já deu a ele) fica no topo, como os de
   lista suspensa.
 - Uma **lista vertical que não cabe** vai para a **coluna de filtros**: duas
-  colunas do grid à direita, do topo até a base. A nota metodológica, se
-  houver, fecha essa coluna embaixo.
+  colunas do grid à direita, a partir do topo. A lista fica com a altura dos
+  seus itens, mais uma folga, e não estica até a base.
+- A **nota metodológica** fecha a coluna embaixo só se o texto couber na
+  largura dela. Uma nota longa fica numa linha no fim da área principal.
 - Um segmentador em **lista suspensa** numa página com coluna de filtros fica
   no topo ao lado dos KPIs, se couber. Se a página não tiver KPI ou não houver
   colunas sobrando, vai para o alto da coluna.
@@ -178,6 +180,9 @@ Regras do topo:
 - **Base**: visuais secundários à esquerda e tabelas e matrizes à direita, com
   o dobro da largura, porque precisam de colunas legíveis. Uma tabela sozinha
   na base ocupa a largura toda.
+- **Tabela que ficaria estreita** para os campos ao dividir a base: os
+  visuais secundários sobem para o meio, ao lado dos gráficos, e a tabela fica
+  com a largura toda.
 - **Nenhuma faixa fica vazia.** Sem tendência nem comparação, a base sobe e
   ocupa o meio. Sem nada no topo, o meio sobe.
 
@@ -188,7 +193,8 @@ Regras do topo:
 - **Meio**: cerca de 55% do que sobra.
 - **Base**: o restante. Se ela ficar baixa demais para ser legível e o meio
   tiver folga, as duas se equilibram.
-- **Nota** (sem coluna de filtros): linha estreita no fim da área principal.
+- **Nota** (sem coluna de filtros, ou longa demais para ela): linha estreita no
+  fim da área principal.
 - **Navegação**: linha fixa no rodapé, à direita.
 
 ## 10. Tamanho mínimo para continuar legível
@@ -205,6 +211,11 @@ escala na mesma proporção:
 Se a página não comportar todos os visuais com essas medidas, o plugin
 prioriza a ordem de leitura e registra a limitação no relatório, em vez de
 espremer visuais até ficarem ilegíveis.
+
+Um gráfico ou tabela que perde mais de 10% da menor dimensão também vira
+limitação, para você conferir no Power BI Desktop. No teste real com o painel
+IFData, uma rosca que encolheu cortou o rótulo central, e uma dispersão mais
+baixa perdeu marcas do eixo.
 
 ## 11. Casos especiais
 

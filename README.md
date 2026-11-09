@@ -1,7 +1,7 @@
 # Power BI Layout Agent — plugin para o Claude Code
 
 [![testes](https://github.com/fernandofigueiredo-data/powerbi-layout-agent-automation/actions/workflows/testes.yml/badge.svg)](https://github.com/fernandofigueiredo-data/powerbi-layout-agent-automation/actions/workflows/testes.yml)
-![versão](https://img.shields.io/badge/vers%C3%A3o-0.3.0-blue)
+![versão](https://img.shields.io/badge/vers%C3%A3o-0.3.1-blue)
 ![licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
 
 Reorganiza o layout de qualquer relatório Power BI (`.pbix`) com o
@@ -66,7 +66,48 @@ A nota mede a aderência às regras desta página, e o motor aplica essas mesmas
 regras, então 100 na proposta é o esperado: prova consistência, não
 legibilidade percebida. A checagem de erros (sobreposição, visual fora da
 margem, espaçamento fora da calha) é objetiva. A conferência visual final é
-no Power BI Desktop, porque o pbix-mcp não renderiza páginas.
+no Power BI Desktop, porque o pbix-mcp não renderiza páginas. O caso real
+abaixo mostra por que ela importa.
+
+## Teste real no Power BI Desktop
+
+Painel IFData (dados do Banco Central, junho de 2026), com 2 páginas de
+1920×1080 e 18 visuais. Nota de layout: **60,6 → 100**. O `compare_pbix.py`
+confirmou que só a geometria mudou, e o `pbix_doctor` não apontou falhas.
+Capturas do autor, no Power BI Desktop:
+
+| Antes | Depois |
+|---|---|
+| ![Página 1 antes: filtros numa coluna à esquerda, cartões, barras e rosca no meio, tabela larga na base](docs/caso-real/ifdata_pagina1_antes.png) | ![Página 1 depois: cartões a partir do canto esquerdo, barras e rosca no meio, tabela com a largura toda, filtros numa coluna à direita](docs/caso-real/ifdata_pagina1_depois.png) |
+| ![Página 2 antes: filtros à esquerda, colunas em cima e dispersão alta embaixo](docs/caso-real/ifdata_pagina2_antes.png) | ![Página 2 depois: colunas em cima e dispersão embaixo, com a largura do grid, filtros à direita](docs/caso-real/ifdata_pagina2_depois.png) |
+
+**O que melhorou.** Todas as bordas caem no grid de 12 px. Margens de 36 px e
+calhas de 24 px substituem espaçamentos de 8 a 264 px. O conteúdo começa no
+canto superior esquerdo, com o KPI principal, e os filtros vão para uma coluna
+à direita, na mesma posição nas duas páginas.
+
+**O que piorou, e só apareceu no Desktop.**
+
+- **Rosca:** o rótulo central foi cortado ("R$ 19,…"), porque ela encolheu de
+  744×420 para 600×360, e o título dela quebrou em duas linhas.
+- **Tabela:** mostra 5 linhas em vez de 7.
+- **Dispersão:** caiu de 580 para 432 px de altura e perdeu marcas do eixo y.
+
+A nota 100 não captura nada disso.
+
+**O que o teste mudou no motor (0.3.1).** As capturas "Depois" são da 0.3.0,
+com três ajustes feitos à mão na revisão da proposta. A 0.3.1 faz esses ajustes
+sozinha e passou a sinalizar o que encolhe demais:
+
+- **Nota longa:** a nota de cerca de 250 caracteres ia para uma caixa de
+  288×48 na coluna de filtros, onde não cabia. Agora fica numa linha no
+  rodapé.
+- **Tabela estreita:** a tabela de 7 campos ficava com 912 px. Agora a rosca
+  sobe para o meio, ao lado das barras, e a tabela fica com a largura toda.
+- **Lista curta:** a lista de 6 segmentos esticava até 732 px. Agora fica com
+  a altura dos seus itens.
+- **Aviso de encolhimento:** um gráfico que perde mais de 10% da menor
+  dimensão gera uma limitação no relatório, para você conferir no Desktop.
 
 ## Regras de layout aplicadas
 
@@ -119,7 +160,9 @@ O plugin foi desenvolvido com o auxílio do Claude Code. Do autor:
   dois tamanhos de página, e a versão 0.2.0, de ponta a ponta num .pbix de
   casos difíceis (seis KPIs, grupos redimensionados, visuais alternados por
   bookmark, formas de fundo, botões de navegação e página 4:3), que virou a
-  fixture `tests/fixtures/casos_pbix.json`.
+  fixture `tests/fixtures/casos_pbix.json`;
+- o teste no Power BI Desktop com o painel IFData e as capturas de antes e
+  depois, que levaram às correções da versão 0.3.1.
 
 ## O que tem de diferente
 
@@ -239,6 +282,7 @@ docs/
   regras-de-layout.md                    # as regras aplicadas, para quem usa o plugin
   exemplo_antes_depois.html              # esquema visual do exemplo
   antes_depois_claro.png, _escuro.png    # o mesmo esquema em imagem, para o README
+  caso-real/                             # capturas do teste no Power BI Desktop
 .github/workflows/testes.yml             # testes em Linux, macOS e Windows
 tests/                                   # unittest, sem dependências
   fixtures/casos_pbix.json               # inventário real de um .pbix de casos difíceis

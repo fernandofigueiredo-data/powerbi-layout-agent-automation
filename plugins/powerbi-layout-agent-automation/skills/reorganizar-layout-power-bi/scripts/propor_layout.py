@@ -108,6 +108,30 @@ def pesos_meio(itens):
     return [1.5 if destaque else 1] + [1] * (len(itens) - 1)
 
 
+def nota_cabe_na_coluna(u, wc, h_max, s):
+    """A nota cabe na coluna de filtros (largura wc, altura até h_max)?
+
+    Com o texto no inventário, estima as linhas que ele ocupa numa fonte pequena
+    (6 px por caractere e 16 px por linha, em 1280). Sem o texto, uma nota que no
+    original era mais larga que duas colunas de filtros é tratada como longa.
+    """
+    texto = (u["rep"].get("title") or "").strip()
+    if not texto:
+        return u["rep"]["width"] <= 2 * wc
+    por_linha = max(1, int(wc // (6 * s)))
+    n_linhas = -(-len(texto) // por_linha)
+    return n_linhas * 16 * s <= h_max
+
+
+def campos(u):
+    return len(u["rep"].get("fields") or [])
+
+
+def tabela_apertada(u, largura, s):
+    """Tabela ou matriz com menos de 90 px (em 1280) por campo exibido."""
+    return u["role"] == "detalhe" and campos(u) and largura < 90 * s * campos(u)
+
+
 def colocar_linha(pg, itens, y, h, col0, colunas, pesos):
     g = pg.g
     spans = spans_linha(itens, colunas, pesos)
@@ -237,7 +261,14 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
         if forcados:
             pg.dec(f"{len(forcados)} filtro(s) na coluna para repetir a posição que têm nas outras páginas.")
         if notas:
-            notas_coluna, notas = notas, []
+            # Só a nota que cabe na largura da coluna a fecha; a longa fica numa linha
+            # no fim da área principal, onde o texto tem a largura do conteúdo.
+            wc = largura_vao(g, fc)
+            notas_coluna = [u for u in notas if nota_cabe_na_coluna(u, wc, 12 * b, s)]
+            notas = [u for u in notas if u not in notas_coluna]
+            if notas:
+                pg.dec(f"{len(notas)} nota(s) longa(s) demais para os {wc} px da coluna de filtros ficam "
+                       "numa linha no fim da área principal.")
         if coluna_abaixo:
             pg.dec(f"a faixa de KPIs usa as {C} colunas para que os {nk} KPIs tenham 2 colunas cada; "
                    "a coluna de filtros começa logo abaixo dela.")
@@ -343,8 +374,17 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
         livre_u = int((disponivel - (yc - y_col0)) // b)
         unid = distribuir(pesos, max(len(f_lista), livre_u), minimo=min(8, livre_u // len(f_lista)))
         for u, n in zip(f_lista, unid):
-            pg.geo[u["chave"]] = (xc, yc, wc, n * b)
-            yc += n * b + gt
+            h = n * b
+            # Lista com poucos itens não estica até a base: altura dos itens com 20% de folga.
+            itens = u["rep"].get("items")
+            if itens:
+                teto = encaixar((40 + 24 * int(itens)) * s * 1.2, b, "ceil")
+                if h > teto:
+                    h = teto
+                    pg.dec(f"lista vertical {rotulo_visual(u['rep'])} com a altura dos seus {int(itens)} itens "
+                           f"({h} px); o resto da coluna fica livre.")
+            pg.geo[u["chave"]] = (xc, yc, wc, h)
+            yc += h + gt
         yc = y_fim
         for u, h in reversed(list(zip(notas_coluna, alt_notas))):
             yc -= h
@@ -372,6 +412,23 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
     base_o = sorted([u for u in base_ if u["role"] == "secundario"], key=lambda u: u["x"]) + \
         sorted([u for u in base_ if u["role"] == "detalhe"], key=lambda u: u["x"])
     lin_meio, lin_base = linhas(meio_o), linhas(base_o)
+    # Tabela que ficaria estreita para os campos dividindo a base com secundários:
+    # os secundários sobem para o meio, se houver vaga; senão, a tabela ganha uma
+    # linha só dela. Só vale se a largura toda bastar para a tabela.
+    detalhes = [u for u in base_o if u["role"] == "detalhe"]
+    secs = [u for u in base_o if u["role"] == "secundario"]
+    if detalhes and secs and len(base_o) <= POR_LINHA:
+        spans = spans_linha(base_o, Cm, [2 if u["role"] == "detalhe" else 1 for u in base_o])
+        apertadas = [u for u, sp in zip(base_o, spans) if tabela_apertada(u, largura_vao(g, sp), s)]
+        if apertadas and not any(tabela_apertada(u, largura_vao(g, Cm), s) for u in apertadas):
+            nomes = ", ".join(rotulo_visual(u["rep"]) for u in apertadas)
+            if len(lin_meio) == 1 and len(meio_o) + len(secs) <= POR_LINHA:
+                lin_meio, lin_base = [meio_o + secs], linhas(detalhes)
+                pg.dec(f"{len(secs)} visual(is) secundário(s) sobem para o meio, ao lado de "
+                       f"{rotulo_visual(meio_o[0]['rep'])}, para que {nomes} tenha a largura toda na base.")
+            else:
+                lin_base = linhas(secs) + linhas(detalhes)
+                pg.dec(f"{nomes} ganha uma linha só dela na base, com a largura toda, para caberem os campos.")
     n_lin = len(lin_meio) + len(lin_base)
     R = y_fim_main - y_meio0 - gt * max(0, n_lin - 1)
     if n_lin:
@@ -410,11 +467,21 @@ def layout_normal(pg, us, forcar_coluna=frozenset()):
         pg.dec("página sem tendência ou comparação; a base sobe e ocupa o meio.")
     # Tabelas e matrizes: pelo menos 90 px (em 1280) por campo exibido.
     for u in base_:
-        n_campos = len(u["rep"].get("fields") or [])
         geo = pg.geo.get(u["chave"])
-        if u["role"] == "detalhe" and n_campos and geo and geo[2] < 90 * s * n_campos:
-            pg.lim(f"{rotulo_visual(u['rep'])} com {geo[2]} px para {n_campos} campos, abaixo de "
+        if geo and tabela_apertada(u, geo[2], s):
+            pg.lim(f"{rotulo_visual(u['rep'])} com {geo[2]} px para {campos(u)} campos, abaixo de "
                    f"{90 * s:.0f} px por campo; colunas podem ficar cortadas.")
+    # Gráfico ou tabela que perde mais de 10% da menor dimensão: rótulos centrais,
+    # marcas de eixo e linhas visíveis podem sumir (visto no Desktop num teste real).
+    for u in us:
+        geo = pg.geo.get(u["chave"])
+        if not geo or u["role"] not in MEIO | BASE:
+            continue
+        antes = min(u["rep"]["width"], u["rep"]["height"])
+        depois = min(geo[2], geo[3])
+        if antes and depois < 0.9 * antes:
+            pg.lim(f"{rotulo_visual(u['rep'])} encolhe de {antes:.0f} para {depois:.0f} px na menor dimensão; "
+                   "confira no Power BI Desktop rótulos, marcas de eixo e linhas visíveis.")
     densidade = len(us)
     if densidade > 8:
         pg.lim(f"{densidade} vagas na página, acima da referência de 6 a 8 por página (observação, não alterado).")

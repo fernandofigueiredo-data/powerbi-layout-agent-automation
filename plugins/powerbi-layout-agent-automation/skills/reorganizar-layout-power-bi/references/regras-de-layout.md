@@ -45,7 +45,8 @@ As regras que o motor (`scripts/propor_layout.py`) aplica e que valem para qualq
 ## 5. Filtros
 
 - **Lista vertical que cabe na faixa superior** (pelos itens em `items`, cerca de 24 px por item mais 40 px de cabeçalho em 1280×720, ou pela altura que o autor já deu a ela) fica na faixa, como os de lista suspensa.
-- **Lista vertical que não cabe** vai para a coluna de filtros: duas colunas do grid à direita, começando na faixa superior (o segundo ponto do Z) e descendo até a base. A nota metodológica fecha a coluna embaixo.
+- **Lista vertical que não cabe** vai para a coluna de filtros: duas colunas do grid à direita, começando na faixa superior (o segundo ponto do Z). A lista recebe a altura dos seus itens com 20% de folga (pelos `items`), não a coluna inteira; sem `items`, divide a altura disponível.
+- **Nota na coluna de filtros só se couber**: a nota metodológica fecha a coluna embaixo quando o texto cabe na largura dela (estimativa de 6 px por caractere e 16 px por linha, em 1280×720, até 12 unidades de altura). Nota longa, ou sem texto no inventário e que no original era mais larga que duas colunas de filtros, fica numa linha no fim da área principal.
 - **Lista suspensa com coluna de filtros na página**: fica na faixa ao lado dos KPIs se couber; vai para o alto da coluna quando a página não tem KPI ou quando não há colunas sobrando na faixa.
 - **Mesmo campo, mesma posição**: um campo de filtro que vai para a coluna numa página vai para a coluna em todas as páginas que a têm, e filtros do mesmo campo e do mesmo modo repetem posição e tamanho entre páginas do mesmo tamanho. Quando repetir sobreporia outro visual, o motor registra a exceção em `decisoes`.
 - **Fora do escopo**: trocar uma lista vertical por lista suspensa caberia na faixa, mas é formatação. Registrar a alternativa em "Recomendações fora do escopo".
@@ -54,6 +55,7 @@ As regras que o motor (`scripts/propor_layout.py`) aplica e que valem para qualq
 
 - **Meio**: gráficos de tendência e de comparação. O mais importante (o `principal`, ou o de área original pelo menos 30% maior) fica à esquerda com 2/3 da largura, e o de apoio, à direita. Dois gráficos de importância parecida dividem a largura igualmente. Mais de quatro visuais viram duas linhas.
 - **Base**: visuais secundários à esquerda e tabelas e matrizes à direita, com o dobro do peso, ou a largura toda quando sozinhas, porque precisam de colunas legíveis.
+- **Tabela que ficaria estreita para os campos** dividindo a base (menos de 90 px por campo): os secundários sobem para o meio, ao lado dos gráficos, se o meio tiver uma linha só e couberem nela; senão, a tabela ganha uma linha só dela na base. Só vale quando a largura toda basta para a tabela.
 - **Faixa vazia não fica vazia**: sem tendência nem comparação, a base sobe e ocupa o meio; sem faixa superior, o meio sobe para o topo.
 
 ## 7. Distribuição vertical
@@ -61,7 +63,7 @@ As regras que o motor (`scripts/propor_layout.py`) aplica e que valem para qualq
 - Faixa superior com cerca de 18% da altura útil (entre 15% e 22%), nunca abaixo da altura mínima de um cartão.
 - Meio com cerca de 55% do que sobra; base com o restante.
 - Se a base ficar abaixo do mínimo de legibilidade e o meio tiver folga, as duas se equilibram.
-- Nota sem coluna de filtros: linha estreita no fim da área principal. Navegação: linha fixa no rodapé, à direita.
+- Nota sem coluna de filtros, ou longa demais para ela: linha estreita no fim da área principal. Navegação: linha fixa no rodapé, à direita.
 
 ## 8. Legibilidade mínima
 
@@ -69,7 +71,8 @@ Pontos de partida para 1280×720; o motor escala proporcionalmente em telas maio
 
 - cartões com pelo menos 80 px de altura;
 - gráficos de linha e de barra com pelo menos 200 px de altura;
-- tabelas e matrizes com pelo menos 90 px de largura por campo exibido (contado em `fields`).
+- tabelas e matrizes com pelo menos 90 px de largura por campo exibido (contado em `fields`);
+- gráfico ou tabela que perde mais de 10% da menor dimensão (largura ou altura) gera uma limitação para conferir no Desktop: num teste real, uma rosca que perdeu 14% da altura cortou o rótulo central, e uma dispersão mais baixa perdeu marcas do eixo.
 
 Títulos inteiros e rótulos sem corte só podem ser conferidos no Power BI Desktop. Se a página não comportar todos os visuais com essas medidas, priorizar a hierarquia e registrar a limitação, em vez de espremer visuais até ficarem ilegíveis.
 

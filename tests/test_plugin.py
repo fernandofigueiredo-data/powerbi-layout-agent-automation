@@ -133,7 +133,9 @@ class TestMotor(unittest.TestCase):
         geo = lambda x: (x["x"], x["y"], x["width"], x["height"])  # noqa: E731
         self.assertEqual(geo(v["seg"]), geo(v["seg2"]))
         self.assertEqual(geo(v["uf"]), geo(v["uf2"]))
-        self.assertEqual(v["fonte"]["x"], x_coluna)  # nota fecha a coluna
+        # Nota sem texto que no original era uma linha larga: fica no fim da área principal.
+        self.assertEqual(v["fonte"]["x"], g["x_colunas"][0])
+        self.assertEqual(v["fonte"]["y"] + v["fonte"]["height"], 1080 - g["margem"])
         self.assertEqual((v["titulo"]["x"], v["titulo"]["y"], v["titulo"]["width"]), (0, 0, 1920))
 
     def test_titulo_largo_vira_cabecalho_e_kpi_abre_a_faixa(self):
@@ -475,6 +477,51 @@ class TestMotorBordas(unittest.TestCase):
                 "height": 200}]
         depois = propor_layout.propor(pagina_sintetica(vis), opcoes())
         self.assertTrue(any("tab" in l and "por campo" in l for l in depois["limitacoes"]))
+
+
+class TestCasoRealIFData(unittest.TestCase):
+    """Correções vindas do teste real com o painel IFData (1920×1080, filtros em coluna)."""
+
+    def setUp(self):
+        self.depois = propor_layout.propor(fixture("pagina_1920_coluna.json"), opcoes())
+        self.v = por_id(self.depois)
+        self.g = _grid.grid_padrao(1920, 1080)
+
+    def pagina_com_nota(self, texto):
+        doc = copy.deepcopy(fixture("pagina_1920_coluna.json"))
+        doc["pages"][0]["visuals"][-1]["title"] = texto
+        return por_id(propor_layout.propor(doc, opcoes()))
+
+    def test_nota_curta_fecha_a_coluna_e_longa_vai_para_o_rodape(self):
+        x_coluna = self.g["x_colunas"][10]
+        curta = self.pagina_com_nota("Fonte: IF.data, Banco Central.")
+        self.assertEqual(curta["fonte"]["x"], x_coluna)
+        longa = self.pagina_com_nota("Valores originais em R$ mil (junho/2026); exibidos em R$ bi e R$ tri. " * 4)
+        self.assertEqual(longa["fonte"]["x"], self.g["x_colunas"][0])
+        self.assertEqual(longa["fonte"]["width"], _grid.largura_vao(self.g, 10))
+
+    def test_tabela_apertada_leva_o_secundario_para_o_meio(self):
+        doc = copy.deepcopy(fixture("pagina_1920_coluna.json"))
+        doc["pages"][0]["visuals"][8]["fields"] = [f"ifdata.c{i}" for i in range(7)]
+        depois = propor_layout.propor(doc, opcoes())
+        v = por_id(depois)
+        self.assertEqual(v["rosca"]["y"], v["barras"]["y"])  # rosca ao lado das barras
+        self.assertEqual(v["tabela"]["width"], _grid.largura_vao(self.g, 10))  # tabela com a largura toda
+        self.assertFalse(any("por campo" in l for l in depois["limitacoes"]))
+        self.assertTrue(any("sobem para o meio" in d for d in depois["decisoes"]))
+        self.assertEqual(conferir(depois)[0], [])
+
+    def test_lista_curta_nao_estica_ate_a_base(self):
+        # 6 itens: (40 + 24 × 6) × 1,5 × 1,2 = 331 → 336 px na unidade de 12.
+        self.assertEqual(self.v["seg"]["height"], 336)
+        self.assertEqual(self.v["seg2"]["height"], 336)
+
+    def test_grafico_que_encolhe_muito_gera_limitacao(self):
+        doc = copy.deepcopy(fixture("pagina_1920_coluna.json"))
+        doc["pages"][0]["visuals"][8]["fields"] = [f"ifdata.c{i}" for i in range(7)]
+        depois = propor_layout.propor(doc, opcoes())
+        self.assertTrue(any("donutChart" in l and "encolhe" in l for l in depois["limitacoes"]))
+        self.assertTrue(any("scatterChart" in l and "encolhe" in l for l in self.depois["limitacoes"]))
 
 
 class TestHerdarECamada(unittest.TestCase):
